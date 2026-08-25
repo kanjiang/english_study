@@ -119,7 +119,34 @@ void main() {
     final repo = FakeUserRepository(seed());
 
     await repo.addPendingCoins(20);
-    expect((await repo.load())!.child.wallet.coins, 40);
+    expect((await repo.load())!.child.wallet.coins, 60);
+
+    await repo.flushPendingCoins();
+
+    expect((await repo.load())!.child.wallet.coins, 60);
+  });
+
+  test('save persists cloud coins without double-counting pending coins', () async {
+    final repo = FakeUserRepository(seed());
+
+    await repo.addPendingCoins(20);
+
+    final loaded = await repo.load();
+    expect(loaded, isNotNull);
+    expect(loaded!.child.wallet.coins, 60);
+
+    await repo.save(
+      loaded.copyWith(
+        time: TimeQuota(
+          dailyLimitMinutes: loaded.time.dailyLimitMinutes,
+          bonusMinutes: loaded.time.bonusMinutes,
+          usedSeconds: loaded.time.usedSeconds + 5,
+          usedOnDate: loaded.time.usedOnDate,
+        ),
+      ),
+    );
+
+    expect((await repo.load())!.child.wallet.coins, 60);
 
     await repo.flushPendingCoins();
 

@@ -33,6 +33,34 @@ class ShopPurchaseException implements Exception {
   String toString() => 'ShopPurchaseException($errorKey)';
 }
 
+UserSnapshot _copySnapshotWithCoins(UserSnapshot snapshot, int coins) {
+  return snapshot.copyWith(
+    child: ChildProfile(
+      name: snapshot.child.name,
+      avatarId: snapshot.child.avatarId,
+      wallet: Wallet(
+        coins: coins,
+        ownedItemIds: snapshot.child.wallet.ownedItemIds,
+        equipped: snapshot.child.wallet.equipped,
+      ),
+    ),
+  );
+}
+
+UserSnapshot _mergePendingIntoSnapshot(UserSnapshot snapshot, int pendingCoins) {
+  final mergedCoins = mergeCoins(
+    cloudCoins: snapshot.child.wallet.coins,
+    pendingLegalReward: pendingCoins,
+  );
+  return _copySnapshotWithCoins(snapshot, mergedCoins);
+}
+
+UserSnapshot _stripPendingFromSnapshot(UserSnapshot snapshot, int pendingCoins) {
+  final pending = pendingCoins < 0 ? 0 : pendingCoins;
+  final cloudCoins = snapshot.child.wallet.coins - pending;
+  return _copySnapshotWithCoins(snapshot, cloudCoins < 0 ? 0 : cloudCoins);
+}
+
 class FakeUserRepository implements UserRepository {
   FakeUserRepository([UserSnapshot? initialSnapshot, this.online = true])
     : _snapshot = initialSnapshot;
@@ -48,18 +76,18 @@ class FakeUserRepository implements UserRepository {
   Stream<UserSnapshot?> watch() => _controller.stream;
 
   @override
-  Future<UserSnapshot?> load() async => _snapshot;
+  Future<UserSnapshot?> load() async => _visibleSnapshot(_snapshot);
 
   @override
   Future<void> createInitial(UserSnapshot snapshot) async {
     _snapshot = snapshot;
-    _controller.add(_snapshot);
+    _controller.add(_visibleSnapshot(_snapshot));
   }
 
   @override
   Future<void> save(UserSnapshot snapshot) async {
-    _snapshot = snapshot;
-    _controller.add(_snapshot);
+    _snapshot = _stripPendingFromSnapshot(snapshot, _pendingCoins);
+    _controller.add(_visibleSnapshot(_snapshot));
   }
 
   @override
@@ -78,7 +106,7 @@ class FakeUserRepository implements UserRepository {
         wallet: result.wallet,
       ),
     );
-    _controller.add(_snapshot);
+    _controller.add(_visibleSnapshot(_snapshot));
   }
 
   @override
@@ -92,22 +120,14 @@ class FakeUserRepository implements UserRepository {
   @override
   Future<void> flushPendingCoins() async {
     final snapshot = _requireSnapshot();
-    final mergedCoins = mergeCoins(
-      cloudCoins: snapshot.child.wallet.coins,
-      pendingLegalReward: _pendingCoins,
-    );
+    final pendingCoins = _pendingCoins < 0 ? 0 : _pendingCoins;
 
     _pendingCoins = 0;
-    _snapshot = snapshot.copyWith(
-      child: ChildProfile(
-        name: snapshot.child.name,
-        avatarId: snapshot.child.avatarId,
-        wallet: snapshot.child.wallet.addCoins(
-          mergedCoins - snapshot.child.wallet.coins,
-        ),
-      ),
+    _snapshot = _copySnapshotWithCoins(
+      snapshot,
+      snapshot.child.wallet.coins + pendingCoins,
     );
-    _controller.add(_snapshot);
+    _controller.add(_visibleSnapshot(_snapshot));
   }
 
   UserSnapshot _requireSnapshot() {
@@ -116,6 +136,13 @@ class FakeUserRepository implements UserRepository {
       throw StateError('missing_snapshot');
     }
     return snapshot;
+  }
+
+  UserSnapshot? _visibleSnapshot(UserSnapshot? snapshot) {
+    if (snapshot == null) {
+      return null;
+    }
+    return _mergePendingIntoSnapshot(snapshot, _pendingCoins);
   }
 }
 
@@ -151,23 +178,23 @@ class FirestoreUserRepository implements UserRepository {
     final doc = _userDoc;
 
     if (uid == null || doc == null) {
-      return Stream<UserSnapshot?>.value(null);
+      return Stream<UserSnapshot?>.fromFuture(_loadDisplayedLocalSnapshot());
     }
 
     return doc.snapshots().asyncMap((snapshot) async {
       if (!snapshot.exists) {
-        return _cache.loadSnapshot();
+        return _loadDisplayedLocalSnapshot();
       }
 
       final data = snapshot.data();
       if (data == null) {
-        return _cache.loadSnapshot();
+        return _loadDisplayedLocalSnapshot();
       }
 
       final merged = await _mergeRemoteSnapshot(
         UserSnapshot.fromMap(uid, data),
       );
-      await _persistLocal(merged);
+      await _persistLocalDisplayedSnapshot(merged);
       return merged;
     });
   }
@@ -178,33 +205,33 @@ class FirestoreUserRepository implements UserRepository {
     final doc = _userDoc;
 
     if (uid == null || doc == null) {
-      return _cache.loadSnapshot();
+      return _loadDisplayedLocalSnapshot();
     }
 
     try {
       final snapshot = await doc.get();
       if (!snapshot.exists) {
-        return _cache.loadSnapshot();
+        return _loadDisplayedLocalSnapshot();
       }
 
       final data = snapshot.data();
       if (data == null) {
-        return _cache.loadSnapshot();
+        return _loadDisplayedLocalSnapshot();
       }
 
       final merged = await _mergeRemoteSnapshot(
         UserSnapshot.fromMap(uid, data),
       );
-      await _persistLocal(merged);
+      await _persistLocalDisplayedSnapshot(merged);
       return merged;
     } catch (_) {
-      return _cache.loadSnapshot();
+      return _loadDisplayedLocalSnapshot();
     }
   }
 
   @override
   Future<void> createInitial(UserSnapshot snapshot) async {
-    await _persistLocal(snapshot);
+    await _persistLocalCloudSnapshot(snapshot);
 
     final doc = _userDoc;
     if (doc == null) {
@@ -220,7 +247,9 @@ class FirestoreUserRepository implements UserRepository {
 
   @override
   Future<void> save(UserSnapshot snapshot) async {
-    await _persistLocal(snapshot);
+    final pendingCoins = await _cache.loadPendingReward();
+    final cloudSnapshot = _stripPendingFromSnapshot(snapshot, pendingCoins);
+    await _persistLocalCloudSnapshot(cloudSnapshot);
 
     final doc = _userDoc;
     if (doc == null) {
@@ -228,7 +257,7 @@ class FirestoreUserRepository implements UserRepository {
     }
 
     try {
-      await doc.set(snapshot.toMap());
+      await doc.set(cloudSnapshot.toMap());
     } catch (_) {
       await _cache.saveUsedSeconds(snapshot.time.usedSeconds);
     }
@@ -276,7 +305,7 @@ class FirestoreUserRepository implements UserRepository {
     }
 
     if (updated != null) {
-      await _persistLocal(updated!);
+      await _persistLocalCloudSnapshot(updated!);
     }
   }
 
@@ -336,7 +365,7 @@ class FirestoreUserRepository implements UserRepository {
 
     if (updated != null) {
       await _cache.savePendingReward(0);
-      await _persistLocal(updated!);
+      await _persistLocalCloudSnapshot(updated!);
     }
   }
 
@@ -369,7 +398,24 @@ class FirestoreUserRepository implements UserRepository {
     );
   }
 
-  Future<void> _persistLocal(UserSnapshot snapshot) async {
+  Future<UserSnapshot?> _loadDisplayedLocalSnapshot() async {
+    final local = await _cache.loadSnapshot();
+    if (local == null) {
+      return null;
+    }
+
+    final pendingCoins = await _cache.loadPendingReward();
+    return _mergePendingIntoSnapshot(local, pendingCoins);
+  }
+
+  Future<void> _persistLocalDisplayedSnapshot(UserSnapshot snapshot) async {
+    final pendingCoins = await _cache.loadPendingReward();
+    await _persistLocalCloudSnapshot(
+      _stripPendingFromSnapshot(snapshot, pendingCoins),
+    );
+  }
+
+  Future<void> _persistLocalCloudSnapshot(UserSnapshot snapshot) async {
     await _cache.saveSnapshot(snapshot);
     await _cache.saveUsedSeconds(snapshot.time.usedSeconds);
   }
