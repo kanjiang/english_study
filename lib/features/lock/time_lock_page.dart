@@ -27,9 +27,25 @@ class TimeLockPage extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () => _pushPlaceholder(context, '家长'),
+                  child: const Text('家长'),
+                ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _pushPlaceholder(BuildContext context, String title) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: Text(title)),
+          body: Center(child: Text('$title（占位）')),
         ),
       ),
     );

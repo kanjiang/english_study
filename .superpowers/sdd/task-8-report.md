@@ -22,3 +22,15 @@ Completed.
 
 - Locked widget test seeds `usedOnDate` with `ShanghaiClock().todayYyyyMmDd()` after timezone initialization so the locked snapshot stays locked.
 - `ChildHomePage` hides game buttons while locked so lock assertions do not find game text underneath the overlay.
+
+## Review Follow-up
+
+- Removed onboarding's direct `pushReplacement` to `ChildHomePage`; after `createInitial`, the screen now finishes with `Navigator.maybePop()` so first-run users stay under `ForegroundTicker(child: AuthGate())` and `AuthGate` can rebuild from `watch()`.
+- Added a visible `家长` button to `TimeLockPage` that opens the same placeholder parent route as the home page while keeping games blocked behind the lock state.
+- Added a widget regression test that proves onboarding returns to its caller after profile creation, and updated the lock-page widget test to assert the exact copy plus the visible parent button while still ensuring `寻宝翻牌` is not available.
+
+## Verification Follow-up
+
+- Red: `flutter test test/widget/time_lock_test.dart test/widget/auth_gate_test.dart` initially failed on the new onboarding regression test and then on test harness gaps around Firebase/timezone setup and the lock-page selector.
+- Green: `flutter test test/widget/time_lock_test.dart test/widget/auth_gate_test.dart` passed after the onboarding and lock-page fixes plus the test updates.
+- Full verification: `flutter test` passed.

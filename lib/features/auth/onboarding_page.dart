@@ -4,7 +4,6 @@ import 'package:english_app/domain/shanghai_clock.dart';
 import 'package:english_app/domain/time/time_quota.dart';
 import 'package:english_app/domain/user/user_snapshot.dart';
 import 'package:english_app/domain/wallet/wallet.dart';
-import 'package:english_app/features/home/child_home_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -96,7 +95,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       _submitting = true;
     });
 
-    final firebaseUser = FirebaseAuth.instance.currentUser;
+    final firebaseUser = _currentUser();
     final uid = firebaseUser?.uid ?? 'local';
     final snapshot = UserSnapshot(
       uid: uid,
@@ -129,15 +128,19 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     setState(() {
       _submitting = false;
     });
-    await Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => ChildHomePage(snapshot: snapshot),
-      ),
-    );
+    await Navigator.of(context).maybePop();
   }
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  User? _currentUser() {
+    try {
+      return FirebaseAuth.instance.currentUser;
+    } catch (_) {
+      return null;
+    }
   }
 }

@@ -3,6 +3,7 @@ import 'package:english_app/app/providers.dart';
 import 'package:english_app/data/user_repository.dart';
 import 'package:english_app/domain/shanghai_clock.dart';
 import 'package:english_app/domain/time/time_quota.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
@@ -39,6 +40,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('今天的学习时间用完了，请爸爸妈妈来帮忙。'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '家长'), findsOneWidget);
     expect(find.text('寻宝翻牌'), findsNothing);
   });
 
