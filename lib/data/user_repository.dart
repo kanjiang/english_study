@@ -65,6 +65,8 @@ class FakeUserRepository implements UserRepository {
   FakeUserRepository([UserSnapshot? initialSnapshot, this.online = true])
     : _snapshot = initialSnapshot;
 
+  FakeUserRepository.empty([this.online = true]) : _snapshot = null;
+
   final bool online;
   final StreamController<UserSnapshot?> _controller =
       StreamController<UserSnapshot?>.broadcast(sync: true);
@@ -73,7 +75,17 @@ class FakeUserRepository implements UserRepository {
   int _pendingCoins = 0;
 
   @override
-  Stream<UserSnapshot?> watch() => _controller.stream;
+  Stream<UserSnapshot?> watch() {
+    return Stream<UserSnapshot?>.multi((controller) {
+      controller.add(_visibleSnapshot(_snapshot));
+      final subscription = _controller.stream.listen(
+        controller.add,
+        onError: controller.addError,
+        onDone: controller.close,
+      );
+      controller.onCancel = subscription.cancel;
+    });
+  }
 
   @override
   Future<UserSnapshot?> load() async => _visibleSnapshot(_snapshot);
@@ -178,7 +190,7 @@ class FirestoreUserRepository implements UserRepository {
     final doc = _userDoc;
 
     if (uid == null || doc == null) {
-      return Stream<UserSnapshot?>.fromFuture(_loadDisplayedLocalSnapshot());
+      return Stream<UserSnapshot?>.value(null);
     }
 
     return doc.snapshots().asyncMap((snapshot) async {

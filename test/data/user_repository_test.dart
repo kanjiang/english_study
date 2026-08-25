@@ -1,7 +1,12 @@
+import 'dart:convert';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:english_app/data/local_cache.dart';
 import 'package:english_app/data/user_repository.dart';
 import 'package:english_app/domain/time/time_quota.dart';
 import 'package:english_app/domain/user/user_snapshot.dart';
 import 'package:english_app/domain/wallet/wallet.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,6 +15,31 @@ import '../helpers/seed.dart';
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+  });
+
+  test('watch emits null when fake repository is empty', () async {
+    final repo = FakeUserRepository();
+
+    await expectLater(
+      repo.watch().first.timeout(const Duration(seconds: 1)),
+      completion(isNull),
+    );
+  });
+
+  test('watch emits null when signed out even with cached snapshot', () async {
+    final cache = LocalCache();
+    await cache.saveSnapshot(seed());
+
+    final repo = FirestoreUserRepository(
+      auth: _FakeFirebaseAuth(),
+      db: _FakeFirebaseFirestore(),
+      cache: cache,
+    );
+
+    await expectLater(
+      repo.watch().first.timeout(const Duration(seconds: 1)),
+      completion(isNull),
+    );
   });
 
   test('createInitial and save update load and watch', () async {
@@ -152,4 +182,17 @@ void main() {
 
     expect((await repo.load())!.child.wallet.coins, 60);
   });
+}
+
+class _FakeFirebaseAuth implements FirebaseAuth {
+  @override
+  User? get currentUser => null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeFirebaseFirestore implements FirebaseFirestore {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
