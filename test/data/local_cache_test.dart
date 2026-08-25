@@ -39,6 +39,19 @@ void main() {
     expect(await cache.loadPendingReward(), 20);
   });
 
+  test('loadSnapshot restores higher persisted used seconds', () async {
+    final cache = LocalCache();
+    final snapshot = seed();
+
+    await cache.saveSnapshot(snapshot);
+    await cache.saveUsedSeconds(80);
+
+    final loaded = await cache.loadSnapshot();
+
+    expect(loaded, isNotNull);
+    expect(loaded!.time.usedSeconds, 80);
+  });
+
   test('saveUsedSeconds persists foreground seconds', () async {
     final cache = LocalCache();
 

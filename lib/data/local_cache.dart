@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:english_app/domain/time/time_quota.dart';
 import 'package:english_app/domain/user/user_snapshot.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -24,9 +26,23 @@ class LocalCache {
       return null;
     }
 
-    return UserSnapshot.fromMap(
+    final snapshot = UserSnapshot.fromMap(
       uid,
       jsonDecode(rawSnapshot) as Map<String, dynamic>,
+    );
+    final storedUsedSeconds = await loadUsedSeconds();
+
+    if (storedUsedSeconds == null) {
+      return snapshot;
+    }
+
+    return snapshot.copyWith(
+      time: TimeQuota(
+        dailyLimitMinutes: snapshot.time.dailyLimitMinutes,
+        bonusMinutes: snapshot.time.bonusMinutes,
+        usedSeconds: max(snapshot.time.usedSeconds, storedUsedSeconds),
+        usedOnDate: snapshot.time.usedOnDate,
+      ),
     );
   }
 
