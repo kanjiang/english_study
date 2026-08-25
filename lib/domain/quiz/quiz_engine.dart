@@ -115,6 +115,7 @@ class QuizEngine {
   final QuizKind kind;
   final List<QuizQuestion> _questions;
   final List<FlipCard> _cards;
+  int? _openIndex;
   int index = 0;
   int coinsEarned = 0;
   int streak = 0;
@@ -165,6 +166,58 @@ class QuizEngine {
   }
 
   EngineFeedback flip(int cardIndex) {
-    throw UnimplementedError('Task 3');
+    if (kind != QuizKind.flipMatch) {
+      throw StateError('use submitAnswer()');
+    }
+    if (isComplete) {
+      throw StateError('round already complete');
+    }
+
+    final card = _cards[cardIndex];
+    if (card.matched || card.faceUp) {
+      return const EngineFeedback(
+        correct: false,
+        coinsDelta: 0,
+        roundComplete: false,
+      );
+    }
+
+    _cards[cardIndex] = card.copyWith(faceUp: true);
+    if (_openIndex == null) {
+      _openIndex = cardIndex;
+      return const EngineFeedback(
+        correct: false,
+        coinsDelta: 0,
+        roundComplete: false,
+      );
+    }
+
+    final first = _cards[_openIndex!];
+    final second = _cards[cardIndex];
+    final matched = first.wordId == second.wordId;
+    var delta = 0;
+    if (matched) {
+      _cards[_openIndex!] = first.copyWith(matched: true, faceUp: true);
+      _cards[cardIndex] = second.copyWith(matched: true, faceUp: true);
+      streak += 1;
+      delta = 3 + (streak >= 3 ? 1 : 0);
+      coinsEarned += delta;
+    } else {
+      _cards[_openIndex!] = first.copyWith(faceUp: false);
+      _cards[cardIndex] = second.copyWith(faceUp: false);
+      streak = 0;
+    }
+    _openIndex = null;
+
+    final done = _cards.every((c) => c.matched);
+    if (done) {
+      isComplete = true;
+    }
+
+    return EngineFeedback(
+      correct: matched,
+      coinsDelta: delta,
+      roundComplete: done,
+    );
   }
 }

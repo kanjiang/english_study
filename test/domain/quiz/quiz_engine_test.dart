@@ -100,4 +100,47 @@ void main() {
     expect(e.total, 10);
     expect(() => e.currentQuestion, throwsStateError);
   });
+
+  test('flipMatch deals 12 cards from 6 words', () {
+    final e = QuizEngine.start(
+      kind: QuizKind.flipMatch,
+      bank: bank10(),
+      random: Random(1),
+    );
+    expect(e.cards, hasLength(12));
+    expect(e.total, 6);
+  });
+
+  test('matching image and text pair awards coins', () {
+    final e = QuizEngine.start(
+      kind: QuizKind.flipMatch,
+      bank: bank10(),
+      random: Random(1),
+    );
+    final first = e.cards.first;
+    final match = e.cards.firstWhere(
+      (c) => c.wordId == first.wordId && c.index != first.index,
+    );
+    e.flip(first.index);
+    final fb = e.flip(match.index);
+    expect(fb.correct, isTrue);
+    expect(fb.coinsDelta, 3);
+    expect(e.cards[first.index].matched, isTrue);
+  });
+
+  test('mismatch flips both back and resets streak', () {
+    final e = QuizEngine.start(
+      kind: QuizKind.flipMatch,
+      bank: bank10(),
+      random: Random(1),
+    );
+    final a = e.cards[0];
+    final b = e.cards.firstWhere((c) => c.wordId != a.wordId);
+    e.flip(a.index);
+    final fb = e.flip(b.index);
+    expect(fb.correct, isFalse);
+    expect(e.streak, 0);
+    expect(e.cards[a.index].faceUp, isFalse);
+    expect(e.cards[b.index].faceUp, isFalse);
+  });
 }
