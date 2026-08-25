@@ -15,3 +15,20 @@
 
 ## Concerns
 - None at the moment.
+
+## Task 4 Update
+- Fixed `Wallet.ownedItemIds` so it no longer aliases caller-owned or sibling-owned mutable sets.
+- `Wallet` now copies incoming item ids into a private backing set and exposes an unmodifiable view.
+- `addCoins`, `equip`, and `unequip` now forward the private backing set so each `Wallet` stays isolated.
+- Added regression tests for constructor isolation and copy isolation.
+
+## Verification Output
+```text
+$ flutter test test/domain/wallet/wallet_test.dart
+00:00 +9: All tests passed!
+```
+
+```text
+$ flutter test
+00:03 +28: All tests passed!
+```

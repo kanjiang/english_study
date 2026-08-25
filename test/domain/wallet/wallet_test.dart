@@ -14,6 +14,38 @@ void main() {
     }
   });
 
+  test('wallet copies owned item ids from the constructor', () {
+    final ownedItemIds = <String>{};
+    final hat = ShopCatalog.items.firstWhere((item) => item.slot == ShopSlot.hat);
+    final wallet = Wallet(
+      coins: 0,
+      ownedItemIds: ownedItemIds,
+      equipped: const Equipped(),
+    );
+
+    ownedItemIds.add(hat.id);
+
+    expect(wallet.ownedItemIds, isNot(contains(hat.id)));
+  });
+
+  test('wallet owned item ids are isolated across copies', () {
+    final ownedItemIds = <String>{};
+    final hat = ShopCatalog.items.firstWhere((item) => item.slot == ShopSlot.hat);
+    final wallet = Wallet(
+      coins: 0,
+      ownedItemIds: ownedItemIds,
+      equipped: const Equipped(),
+    );
+    final sibling = wallet.addCoins(10);
+
+    expect(() => wallet.ownedItemIds.add(hat.id), throwsUnsupportedError);
+
+    ownedItemIds.add(hat.id);
+
+    expect(wallet.ownedItemIds, isNot(contains(hat.id)));
+    expect(sibling.ownedItemIds, isNot(contains(hat.id)));
+  });
+
   test('buy succeeds online when coins are enough', () {
     final hat = ShopCatalog.items.firstWhere((item) => item.price == 20);
     final wallet = Wallet(

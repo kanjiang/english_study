@@ -92,15 +92,17 @@ class WalletBuyResult {
 }
 
 class Wallet {
-  const Wallet({
+  Wallet({
     required this.coins,
-    required this.ownedItemIds,
+    required Set<String> ownedItemIds,
     required this.equipped,
-  });
+  }) : _ownedItemIds = Set<String>.from(ownedItemIds);
 
   final int coins;
-  final Set<String> ownedItemIds;
+  final Set<String> _ownedItemIds;
   final Equipped equipped;
+
+  Set<String> get ownedItemIds => Set.unmodifiable(_ownedItemIds);
 
   Wallet addCoins(int amount) {
     if (amount < 0) {
@@ -108,7 +110,7 @@ class Wallet {
     }
     return Wallet(
       coins: coins + amount,
-      ownedItemIds: ownedItemIds,
+      ownedItemIds: _ownedItemIds,
       equipped: equipped,
     );
   }
@@ -148,7 +150,7 @@ class Wallet {
     final item = ShopCatalog.byId(itemId);
     return Wallet(
       coins: coins,
-      ownedItemIds: ownedItemIds,
+      ownedItemIds: _ownedItemIds,
       equipped: equipped.withSlot(item.slot, itemId),
     );
   }
@@ -156,7 +158,7 @@ class Wallet {
   Wallet unequip(ShopSlot slot) {
     return Wallet(
       coins: coins,
-      ownedItemIds: ownedItemIds,
+      ownedItemIds: _ownedItemIds,
       equipped: equipped.withSlot(slot, null),
     );
   }
