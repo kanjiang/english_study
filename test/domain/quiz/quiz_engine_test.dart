@@ -96,5 +96,8 @@ void main() {
     }
     expect(fb!.roundComplete, isTrue);
     expect(e.isComplete, isTrue);
+    expect(e.index, 10);
+    expect(e.total, 10);
+    expect(() => e.currentQuestion, throwsStateError);
   });
 }

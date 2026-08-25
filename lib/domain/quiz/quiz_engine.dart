@@ -128,6 +128,9 @@ class QuizEngine {
     if (kind == QuizKind.flipMatch) {
       throw StateError('flipMatch has no currentQuestion');
     }
+    if (isComplete || index >= _questions.length) {
+      throw StateError('round already complete');
+    }
     return _questions[index];
   }
 
@@ -152,7 +155,6 @@ class QuizEngine {
     index += 1;
     if (index >= _questions.length) {
       isComplete = true;
-      index = _questions.length - 1;
     }
 
     return EngineFeedback(
