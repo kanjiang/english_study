@@ -4,7 +4,7 @@ import 'package:english_app/domain/shanghai_clock.dart';
 import 'package:english_app/domain/time/time_quota.dart';
 import 'package:english_app/domain/user/user_snapshot.dart';
 import 'package:english_app/domain/wallet/wallet.dart';
-import 'package:english_app/features/auth/auth_gate.dart';
+import 'package:english_app/features/home/child_home_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -130,7 +130,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       _submitting = false;
     });
     await Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const ChildHomePage()),
+      MaterialPageRoute<void>(
+        builder: (_) => ChildHomePage(snapshot: snapshot),
+      ),
     );
   }
 

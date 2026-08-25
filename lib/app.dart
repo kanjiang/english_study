@@ -1,3 +1,4 @@
+import 'package:english_app/app/foreground_ticker.dart';
 import 'package:english_app/features/auth/auth_gate.dart';
 import 'package:flutter/material.dart';
 
@@ -12,7 +13,7 @@ class XiaoCiXingApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const AuthGate(),
+      home: const ForegroundTicker(child: AuthGate()),
     );
   }
 }

@@ -2,6 +2,8 @@ import 'package:english_app/app/providers.dart';
 import 'package:english_app/domain/user/user_snapshot.dart';
 import 'package:english_app/features/auth/login_page.dart';
 import 'package:english_app/features/auth/onboarding_page.dart';
+import 'package:english_app/features/home/child_home_page.dart';
+import 'package:english_app/features/lock/time_lock_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,7 +20,7 @@ class AuthGate extends ConsumerWidget {
       builder: (context, snapshot) {
         final user = snapshot.data;
         if (user != null) {
-          return const ChildHomePage();
+          return _HomeWithLock(snapshot: user);
         }
 
         final signedIn = authState.maybeWhen(
@@ -39,7 +41,7 @@ class AuthGate extends ConsumerWidget {
             }
 
             if (loadSnapshot.data != null) {
-              return const ChildHomePage();
+              return _HomeWithLock(snapshot: loadSnapshot.data!);
             }
 
             return const OnboardingPage();
@@ -50,14 +52,18 @@ class AuthGate extends ConsumerWidget {
   }
 }
 
-class ChildHomePage extends StatelessWidget {
-  const ChildHomePage({super.key});
+class _HomeWithLock extends StatelessWidget {
+  const _HomeWithLock({required this.snapshot});
+
+  final UserSnapshot snapshot;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('小词星')),
-      body: const Center(child: Text('首页')),
+    return Stack(
+      children: [
+        ChildHomePage(snapshot: snapshot),
+        if (snapshot.time.isLocked) const TimeLockPage(),
+      ],
     );
   }
 }
