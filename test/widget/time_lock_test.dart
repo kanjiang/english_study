@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:english_app/app.dart';
 import 'package:english_app/app/providers.dart';
 import 'package:english_app/data/user_repository.dart';
 import 'package:english_app/domain/shanghai_clock.dart';
 import 'package:english_app/domain/time/time_quota.dart';
+import 'package:english_app/domain/user/user_snapshot.dart';
+import 'package:english_app/domain/wallet/wallet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -62,4 +66,87 @@ void main() {
     expect(find.text('消防员灭火'), findsOneWidget);
     expect(find.text('打怪兽'), findsOneWidget);
   });
+
+  testWidgets('foreground tick locks immediately before repository emits', (
+    tester,
+  ) async {
+    final almostLocked = seed().copyWith(
+      time: TimeQuota(
+        dailyLimitMinutes: 20,
+        bonusMinutes: 0,
+        usedSeconds: (20 * 60) - 1,
+        usedOnDate: const ShanghaiClock().todayYyyyMmDd(),
+      ),
+    );
+    final repository = _LaggingSaveUserRepository(almostLocked);
+    addTearDown(repository.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [userRepositoryProvider.overrideWithValue(repository)],
+        child: const XiaoCiXingApp(),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('还剩 1 分钟'), findsOneWidget);
+    expect(find.text('今天的学习时间用完了，请爸爸妈妈来帮忙。'), findsNothing);
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+
+    expect(find.text('今天的学习时间用完了，请爸爸妈妈来帮忙。'), findsOneWidget);
+    expect(find.text('寻宝翻牌'), findsNothing);
+    expect(repository.savedSnapshots, isNotEmpty);
+  });
+}
+
+class _LaggingSaveUserRepository implements UserRepository {
+  _LaggingSaveUserRepository(this._snapshot);
+
+  final StreamController<UserSnapshot?> _controller =
+      StreamController<UserSnapshot?>.broadcast(sync: true);
+  final List<UserSnapshot> savedSnapshots = [];
+
+  UserSnapshot? _snapshot;
+
+  @override
+  Stream<UserSnapshot?> watch() {
+    return Stream<UserSnapshot?>.multi((controller) {
+      controller.add(_snapshot);
+      final subscription = _controller.stream.listen(
+        controller.add,
+        onError: controller.addError,
+        onDone: controller.close,
+      );
+      controller.onCancel = subscription.cancel;
+    });
+  }
+
+  @override
+  Future<UserSnapshot?> load() async => _snapshot;
+
+  @override
+  Future<void> createInitial(UserSnapshot snapshot) async {
+    _snapshot = snapshot;
+    _controller.add(_snapshot);
+  }
+
+  @override
+  Future<void> save(UserSnapshot snapshot) async {
+    savedSnapshots.add(snapshot);
+  }
+
+  @override
+  Future<void> purchase(ShopItem item) async {}
+
+  @override
+  Future<void> addPendingCoins(int coins) async {}
+
+  @override
+  Future<void> flushPendingCoins() async {}
+
+  void dispose() {
+    _controller.close();
+  }
 }

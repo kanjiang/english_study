@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:english_app/data/local_cache.dart';
 import 'package:english_app/data/user_repository.dart';
+import 'package:english_app/domain/user/user_snapshot.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,4 +19,8 @@ final userRepositoryProvider = Provider<UserRepository>((ref) {
     db: FirebaseFirestore.instance,
     cache: LocalCache(),
   );
+});
+
+final foregroundUserSnapshotProvider = StateProvider<UserSnapshot?>((ref) {
+  return null;
 });

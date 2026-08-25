@@ -2,15 +2,13 @@ import 'dart:async';
 
 import 'package:english_app/app/providers.dart';
 import 'package:english_app/domain/shanghai_clock.dart';
+import 'package:english_app/domain/user/sync_merge.dart';
 import 'package:english_app/domain/user/user_snapshot.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ForegroundTicker extends ConsumerStatefulWidget {
-  const ForegroundTicker({
-    required this.child,
-    super.key,
-  });
+  const ForegroundTicker({required this.child, super.key});
 
   final Widget child;
 
@@ -75,8 +73,9 @@ class _ForegroundTickerState extends ConsumerState<ForegroundTicker>
   void _subscribe() {
     final repository = ref.read(userRepositoryProvider);
     _subscription = repository.watch().listen((snapshot) {
-      _snapshot = snapshot;
-      if (snapshot == null || snapshot.time.isLocked) {
+      final next = _mergeRemoteSnapshot(snapshot);
+      _publish(next);
+      if (next == null || next.time.isLocked) {
         _stopTimer(save: false);
         return;
       }
@@ -115,7 +114,7 @@ class _ForegroundTickerState extends ConsumerState<ForegroundTicker>
       todayYyyyMmDd: _clock.todayYyyyMmDd(),
     );
     final next = snapshot.copyWith(time: nextTime);
-    _snapshot = next;
+    _publish(next);
     _dirty = true;
     _secondsSinceSave += 1;
 
@@ -154,5 +153,29 @@ class _ForegroundTickerState extends ConsumerState<ForegroundTicker>
     } finally {
       _saving = false;
     }
+  }
+
+  UserSnapshot? _mergeRemoteSnapshot(UserSnapshot? remote) {
+    if (remote == null) {
+      return null;
+    }
+
+    final local = _snapshot;
+    if (local == null || local.uid != remote.uid) {
+      return remote;
+    }
+
+    return remote.copyWith(
+      time: mergeTimeQuota(
+        local: local.time,
+        remote: remote.time,
+        todayYyyyMmDd: _clock.todayYyyyMmDd(),
+      ),
+    );
+  }
+
+  void _publish(UserSnapshot? snapshot) {
+    _snapshot = snapshot;
+    ref.read(foregroundUserSnapshotProvider.notifier).state = snapshot;
   }
 }

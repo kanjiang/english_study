@@ -13,12 +13,13 @@ class AuthGate extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(userRepositoryProvider);
+    final foregroundSnapshot = ref.watch(foregroundUserSnapshotProvider);
     final authState = ref.watch(firebaseAuthStateProvider);
 
     return StreamBuilder<UserSnapshot?>(
       stream: repository.watch(),
       builder: (context, snapshot) {
-        final user = snapshot.data;
+        final user = foregroundSnapshot ?? snapshot.data;
         if (user != null) {
           return _HomeWithLock(snapshot: user);
         }

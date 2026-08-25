@@ -34,3 +34,13 @@ Completed.
 - Red: `flutter test test/widget/time_lock_test.dart test/widget/auth_gate_test.dart` initially failed on the new onboarding regression test and then on test harness gaps around Firebase/timezone setup and the lock-page selector.
 - Green: `flutter test test/widget/time_lock_test.dart test/widget/auth_gate_test.dart` passed after the onboarding and lock-page fixes plus the test updates.
 - Full verification: `flutter test` passed.
+
+## Critical Follow-up: Live Foreground Ticks
+
+- Root cause: `ForegroundTicker` advanced a private `_snapshot` every second, while `AuthGate` rendered only repository `watch/load` snapshots, so remaining time and lock UI waited for repository persistence/emission.
+- Added `foregroundUserSnapshotProvider` and publish every accepted repository snapshot plus every foreground tick so home and lock UI render from the latest in-memory `UserSnapshot`.
+- Repository watch updates now merge remote time into ticker state with `mergeTimeQuota`, preserving live used seconds while still accepting newer parent limit changes.
+- Persistence behavior remains unchanged: save on lock, save on lifecycle background/stop, and save every 30 foreground seconds.
+- Red: `flutter test test/widget/time_lock_test.dart` failed on `foreground tick locks immediately before repository emits` when a lagging repository did not emit after save.
+- Green: `flutter test test/widget/time_lock_test.dart` passed after publishing live ticker snapshots.
+- Full verification: `flutter test` passed.
