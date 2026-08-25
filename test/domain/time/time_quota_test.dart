@@ -58,6 +58,10 @@ void main() {
     expect(() => q().setDailyLimitMinutes(15), throwsArgumentError);
   });
 
+  test('constructor only allows 20/30/45/60', () {
+    expect(() => q(limit: 15), throwsArgumentError);
+  });
+
   test('reducing limit below used locks', () {
     final next = q(limit: 60, used: 30 * 60).setDailyLimitMinutes(20);
     expect(next.isLocked, isTrue);

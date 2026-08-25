@@ -3,17 +3,24 @@ class TimeQuota {
   static const defaultDailyLimitMinutes = 30;
   static const bonusStepMinutes = 10;
 
-  const TimeQuota({
-    required this.dailyLimitMinutes,
+  TimeQuota({
+    required int dailyLimitMinutes,
     required this.bonusMinutes,
     required this.usedSeconds,
     required this.usedOnDate,
-  });
+  }) : dailyLimitMinutes = _validateDailyLimitMinutes(dailyLimitMinutes);
 
   final int dailyLimitMinutes;
   final int bonusMinutes;
   final int usedSeconds;
   final String usedOnDate;
+
+  static int _validateDailyLimitMinutes(int minutes) {
+    if (!allowedDailyLimitMinutes.contains(minutes)) {
+      throw ArgumentError.value(minutes, 'dailyLimitMinutes');
+    }
+    return minutes;
+  }
 
   int get _capacitySeconds => (dailyLimitMinutes + bonusMinutes) * 60;
 
