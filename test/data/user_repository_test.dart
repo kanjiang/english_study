@@ -42,6 +42,23 @@ void main() {
     );
   });
 
+  test('watch and load ignore cached snapshot for a different signed-in uid', () async {
+    final cache = LocalCache();
+    await cache.saveSnapshot(seed());
+
+    final repo = FirestoreUserRepository(
+      auth: _FakeFirebaseAuth(uid: 'u2'),
+      db: _FakeFirebaseFirestore.missingUser(),
+      cache: cache,
+    );
+
+    await expectLater(
+      repo.watch().first.timeout(const Duration(seconds: 1)),
+      completion(isNull),
+    );
+    expect(await repo.load(), isNull);
+  });
+
   test('createInitial and save update load and watch', () async {
     final repo = FakeUserRepository();
     final updated = seed().copyWith(
@@ -185,14 +202,80 @@ void main() {
 }
 
 class _FakeFirebaseAuth implements FirebaseAuth {
+  _FakeFirebaseAuth({this.uid});
+
+  final String? uid;
+
   @override
-  User? get currentUser => null;
+  User? get currentUser => uid == null ? null : _FakeUser(uid!);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _FakeFirebaseFirestore implements FirebaseFirestore {
+  _FakeFirebaseFirestore();
+
+  _FakeFirebaseFirestore.missingUser();
+
+  @override
+  CollectionReference<Map<String, dynamic>> collection(String path) {
+    return _FakeCollectionReference();
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeUser implements User {
+  _FakeUser(this._uid);
+
+  final String _uid;
+
+  @override
+  String get uid => _uid;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeCollectionReference
+    implements CollectionReference<Map<String, dynamic>> {
+  @override
+  DocumentReference<Map<String, dynamic>> doc([String? path]) {
+    return _FakeDocumentReference();
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeDocumentReference
+    implements DocumentReference<Map<String, dynamic>> {
+  @override
+  Future<DocumentSnapshot<Map<String, dynamic>>> get([GetOptions? options]) async {
+    return _FakeDocumentSnapshot();
+  }
+
+  @override
+  Stream<DocumentSnapshot<Map<String, dynamic>>> snapshots({
+    bool includeMetadataChanges = false,
+    ListenSource source = ListenSource.defaultSource,
+  }) {
+    return Stream.value(_FakeDocumentSnapshot());
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeDocumentSnapshot implements DocumentSnapshot<Map<String, dynamic>> {
+  @override
+  bool get exists => false;
+
+  @override
+  Map<String, dynamic>? data() => null;
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

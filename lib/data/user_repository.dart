@@ -195,12 +195,12 @@ class FirestoreUserRepository implements UserRepository {
 
     return doc.snapshots().asyncMap((snapshot) async {
       if (!snapshot.exists) {
-        return _loadDisplayedLocalSnapshot();
+        return _loadDisplayedLocalSnapshotForUid(uid);
       }
 
       final data = snapshot.data();
       if (data == null) {
-        return _loadDisplayedLocalSnapshot();
+        return _loadDisplayedLocalSnapshotForUid(uid);
       }
 
       final merged = await _mergeRemoteSnapshot(
@@ -217,18 +217,18 @@ class FirestoreUserRepository implements UserRepository {
     final doc = _userDoc;
 
     if (uid == null || doc == null) {
-      return _loadDisplayedLocalSnapshot();
+      return _loadDisplayedLocalSnapshotForUid(uid);
     }
 
     try {
       final snapshot = await doc.get();
       if (!snapshot.exists) {
-        return _loadDisplayedLocalSnapshot();
+        return _loadDisplayedLocalSnapshotForUid(uid);
       }
 
       final data = snapshot.data();
       if (data == null) {
-        return _loadDisplayedLocalSnapshot();
+        return _loadDisplayedLocalSnapshotForUid(uid);
       }
 
       final merged = await _mergeRemoteSnapshot(
@@ -237,7 +237,7 @@ class FirestoreUserRepository implements UserRepository {
       await _persistLocalDisplayedSnapshot(merged);
       return merged;
     } catch (_) {
-      return _loadDisplayedLocalSnapshot();
+      return _loadDisplayedLocalSnapshotForUid(uid);
     }
   }
 
@@ -382,7 +382,7 @@ class FirestoreUserRepository implements UserRepository {
   }
 
   Future<UserSnapshot> _mergeRemoteSnapshot(UserSnapshot remote) async {
-    final local = await _cache.loadSnapshot();
+    final local = await _loadLocalSnapshotForUid(remote.uid);
     final pendingCoins = await _cache.loadPendingReward();
     final mergedTime = local == null
         ? remote.time
@@ -410,14 +410,26 @@ class FirestoreUserRepository implements UserRepository {
     );
   }
 
-  Future<UserSnapshot?> _loadDisplayedLocalSnapshot() async {
-    final local = await _cache.loadSnapshot();
+  Future<UserSnapshot?> _loadDisplayedLocalSnapshotForUid(String? uid) async {
+    if (uid == null) {
+      return null;
+    }
+
+    final local = await _loadLocalSnapshotForUid(uid);
     if (local == null) {
       return null;
     }
 
     final pendingCoins = await _cache.loadPendingReward();
     return _mergePendingIntoSnapshot(local, pendingCoins);
+  }
+
+  Future<UserSnapshot?> _loadLocalSnapshotForUid(String uid) async {
+    final local = await _cache.loadSnapshot();
+    if (local == null || local.uid != uid) {
+      return null;
+    }
+    return local;
   }
 
   Future<void> _persistLocalDisplayedSnapshot(UserSnapshot snapshot) async {
