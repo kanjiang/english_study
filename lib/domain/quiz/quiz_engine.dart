@@ -16,11 +16,13 @@ class EngineFeedback {
     required this.correct,
     required this.coinsDelta,
     required this.roundComplete,
+    required this.judged,
   });
 
   final bool correct;
   final int coinsDelta;
   final bool roundComplete;
+  final bool judged;
 }
 
 class FlipCard {
@@ -162,6 +164,7 @@ class QuizEngine {
       correct: correct,
       coinsDelta: delta,
       roundComplete: isComplete,
+      judged: true,
     );
   }
 
@@ -179,6 +182,7 @@ class QuizEngine {
         correct: false,
         coinsDelta: 0,
         roundComplete: false,
+        judged: false,
       );
     }
 
@@ -189,6 +193,7 @@ class QuizEngine {
         correct: false,
         coinsDelta: 0,
         roundComplete: false,
+        judged: false,
       );
     }
 
@@ -218,6 +223,7 @@ class QuizEngine {
       correct: matched,
       coinsDelta: delta,
       roundComplete: done,
+      judged: true,
     );
   }
 }

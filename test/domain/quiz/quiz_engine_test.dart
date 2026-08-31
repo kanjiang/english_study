@@ -38,6 +38,7 @@ void main() {
     final fb = e.submitAnswer(id);
     expect(fb.correct, isTrue);
     expect(fb.coinsDelta, 3);
+    expect(fb.judged, isTrue);
     expect(e.coinsEarned, 3);
     expect(e.index, 1);
   });
@@ -53,6 +54,7 @@ void main() {
     final fb = e.submitAnswer(wrong);
     expect(fb.correct, isFalse);
     expect(fb.coinsDelta, 0);
+    expect(fb.judged, isTrue);
     expect(e.streak, 0);
     expect(e.index, 1);
   });
@@ -125,6 +127,7 @@ void main() {
     final fb = e.flip(match.index);
     expect(fb.correct, isTrue);
     expect(fb.coinsDelta, 3);
+    expect(fb.judged, isTrue);
     expect(e.cards[first.index].matched, isTrue);
   });
 
@@ -139,8 +142,21 @@ void main() {
     e.flip(a.index);
     final fb = e.flip(b.index);
     expect(fb.correct, isFalse);
+    expect(fb.judged, isTrue);
     expect(e.streak, 0);
     expect(e.cards[a.index].faceUp, isFalse);
     expect(e.cards[b.index].faceUp, isFalse);
+  });
+
+  test('first treasure flip is not judged', () {
+    final e = QuizEngine.start(
+      kind: QuizKind.flipMatch,
+      bank: bank10(),
+      random: Random(1),
+    );
+    final fb = e.flip(e.cards.first.index);
+    expect(fb.judged, isFalse);
+    expect(fb.correct, isFalse);
+    expect(fb.coinsDelta, 0);
   });
 }

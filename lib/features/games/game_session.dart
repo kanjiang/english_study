@@ -203,10 +203,12 @@ class _GameSessionState extends ConsumerState<GameSession> {
   }
 
   Future<void> _afterFeedback(EngineFeedback feedback) async {
-    if (feedback.correct) {
-      _showFeedback(widget.theme.correctText);
-    } else {
-      _showFeedback(widget.theme.wrongText);
+    if (feedback.judged) {
+      if (feedback.correct) {
+        _showFeedback(widget.theme.correctText);
+      } else {
+        _showFeedback(widget.theme.wrongText);
+      }
     }
 
     final foreground = ref.read(foregroundUserSnapshotProvider);

@@ -48,3 +48,12 @@
 - Verification:
   - `flutter test test/widget/game_session_test.dart` -> PASS
   - `flutter test` -> PASS
+
+## Task 10 SnackBar Fix
+
+- Added `judged` to `EngineFeedback` so the treasure engine can separate a first flip from a real match or mismatch result.
+- First treasure flips and already-open taps now return `judged: false`; submit answers and second-card flip outcomes keep `judged: true`.
+- `GameSession._afterFeedback` now skips SnackBars for unjudged feedback, which prevents `Ã»Åä¶Ô£¡` from appearing on the first treasure-card flip.
+- Verification:
+  - `flutter test test/domain/quiz/quiz_engine_test.dart test/widget/game_session_test.dart` -> PASS
+  - `flutter test` -> PASS

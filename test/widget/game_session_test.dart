@@ -100,6 +100,28 @@ void main() {
     expect(labels.isNotEmpty || icons.isNotEmpty, isTrue);
   });
 
+  testWidgets('first treasure flip does not show mismatch feedback', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userRepositoryProvider.overrideWithValue(FakeUserRepository(_zeroCoinSeed())),
+          wordBankProvider.overrideWithValue(_bank10()),
+          wordAudioPlayerProvider.overrideWithValue(SilentWordAudioPlayer()),
+        ],
+        child: const MaterialApp(home: _PushedPage(child: TreasurePage())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final firstCard = _treasurePairsByHiddenKeys().values.first.first;
+    await tester.tap(_cardFinder(firstCard));
+    await tester.pump();
+
+    expect(find.text('没配对！'), findsNothing);
+  });
+
   testWidgets('firefighter shows a replay control for the prompt audio', (
     tester,
   ) async {
