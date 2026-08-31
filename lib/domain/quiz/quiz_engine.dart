@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'dart:math';
 
 import 'package:english_app/domain/quiz/word.dart';
@@ -52,9 +54,10 @@ class FlipCard {
 class QuizEngine {
   QuizEngine._({
     required this.kind,
-    required this._questions,
-    required this._cards,
-  });
+    required List<QuizQuestion> questions,
+    required List<FlipCard> cards,
+  })  : _questions = questions,
+        _cards = cards;
 
   factory QuizEngine.start({
     required QuizKind kind,
