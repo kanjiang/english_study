@@ -14,6 +14,7 @@ class TreasurePage extends StatelessWidget {
         backgroundColor: Color(0xFFFFC107),
         foregroundColor: Color(0xFF5D3A00),
         correctText: '找到宝藏！',
+        wrongText: '没配对！',
         emptyPromptIcon: Icons.diamond,
       ),
     );

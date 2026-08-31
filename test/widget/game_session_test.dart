@@ -146,6 +146,44 @@ void main() {
     expect(find.byKey(const ValueKey('prompt_replay_button')), findsNothing);
   });
 
+  testWidgets('monster wrong answer shows feedback and advances', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userRepositoryProvider.overrideWithValue(FakeUserRepository(_zeroCoinSeed())),
+          wordBankProvider.overrideWithValue(_bank10()),
+          wordAudioPlayerProvider.overrideWithValue(SilentWordAudioPlayer()),
+        ],
+        child: const MaterialApp(home: MonsterPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final promptFinder = find.textContaining('词');
+    expect(promptFinder, findsOneWidget);
+    final promptBefore = tester.widget<Text>(promptFinder).data!;
+    final promptIndex = int.parse(promptBefore.replaceFirst('词', ''));
+    final correctKey = ValueKey<String>('choice_w$promptIndex');
+
+    final choices = tester.widgetList<FilledButton>(find.byType(FilledButton));
+    final wrongKey = choices
+        .map((button) => button.key)
+        .whereType<ValueKey<String>>()
+        .firstWhere((key) => key != correctKey);
+
+    await tester.tap(find.byKey(wrongKey));
+    await tester.pump();
+
+    expect(find.text('落空！'), findsOneWidget);
+
+    await tester.pumpAndSettle();
+
+    final promptAfter = tester.widget<Text>(find.textContaining('词')).data!;
+    expect(promptAfter, isNot(promptBefore));
+  });
+
   testWidgets('locked time after an answer pops game without next prompt', (
     tester,
   ) async {

@@ -14,6 +14,7 @@ class FirefighterPage extends StatelessWidget {
         backgroundColor: Color(0xFFD32F2F),
         foregroundColor: Colors.white,
         correctText: '灭火！',
+        wrongText: '火没灭！',
         emptyPromptIcon: Icons.local_fire_department,
       ),
     );

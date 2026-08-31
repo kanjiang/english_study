@@ -14,6 +14,7 @@ class GameThemeSpec {
     required this.backgroundColor,
     required this.foregroundColor,
     required this.correctText,
+    required this.wrongText,
     required this.emptyPromptIcon,
   });
 
@@ -21,6 +22,7 @@ class GameThemeSpec {
   final Color backgroundColor;
   final Color foregroundColor;
   final String correctText;
+  final String wrongText;
   final IconData emptyPromptIcon;
 }
 
@@ -203,6 +205,8 @@ class _GameSessionState extends ConsumerState<GameSession> {
   Future<void> _afterFeedback(EngineFeedback feedback) async {
     if (feedback.correct) {
       _showFeedback(widget.theme.correctText);
+    } else {
+      _showFeedback(widget.theme.wrongText);
     }
 
     final foreground = ref.read(foregroundUserSnapshotProvider);
@@ -263,6 +267,10 @@ class _GameSessionState extends ConsumerState<GameSession> {
       await repository.save(
         _withScore(_mergeLockedTime(snapshot, lockedSnapshot), score),
       );
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.maybeOf(context)?.clearSnackBars();
     }
 
     if (mounted && Navigator.of(context).canPop()) {

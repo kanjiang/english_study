@@ -14,6 +14,7 @@ class MonsterPage extends StatelessWidget {
         backgroundColor: Color(0xFF311B92),
         foregroundColor: Colors.white,
         correctText: '击中！',
+        wrongText: '落空！',
         emptyPromptIcon: Icons.cruelty_free,
       ),
     );
