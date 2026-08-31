@@ -91,11 +91,14 @@ class _GameSessionState extends ConsumerState<GameSession> {
             crossAxisSpacing: 12,
             children: [
               for (final card in _engine.cards)
-                _TreasureCard(
-                  key: ValueKey('card_${card.index}'),
-                  card: card,
-                  word: _wordsById[card.wordId]!,
-                  onTap: _settling ? null : () => _flip(card.index),
+                KeyedSubtree(
+                  key: ValueKey('card_${card.index}_${card.wordId}'),
+                  child: _TreasureCard(
+                    key: ValueKey('card_${card.index}'),
+                    card: card,
+                    word: _wordsById[card.wordId]!,
+                    onTap: _settling ? null : () => _flip(card.index),
+                  ),
                 ),
             ],
           ),
@@ -116,14 +119,31 @@ class _GameSessionState extends ConsumerState<GameSession> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  IconData(
-                    question.prompt.iconCodePoint,
-                    fontFamily: 'MaterialIcons',
+                if (isListening)
+                  FilledButton.icon(
+                    key: const ValueKey('prompt_replay_button'),
+                    onPressed: _settling ? null : _playCurrentPromptIfNeeded,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: widget.theme.foregroundColor,
+                      foregroundColor: widget.theme.backgroundColor,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
+                    ),
+                    icon: const Icon(Icons.volume_up_rounded),
+                    label: const Text('再听一次'),
+                  )
+                else
+                  Icon(
+                    key: const ValueKey('prompt_image'),
+                    IconData(
+                      question.prompt.iconCodePoint,
+                      fontFamily: 'MaterialIcons',
+                    ),
+                    size: 96,
+                    color: widget.theme.foregroundColor,
                   ),
-                  size: 96,
-                  color: widget.theme.foregroundColor,
-                ),
                 const SizedBox(height: 16),
                 Text(
                   isListening ? '听一听，选择正确图片' : question.prompt.zh,
@@ -295,16 +315,22 @@ class _TreasureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = card.isImage
-        ? Icon(
-            IconData(word.iconCodePoint, fontFamily: 'MaterialIcons'),
-            size: 42,
-          )
-        : Text(
-            word.en,
-            style: Theme.of(context).textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold),
-          );
+    final isRevealed = card.faceUp || card.matched;
+    final Widget content;
+    if (!isRevealed) {
+      content = const SizedBox(width: 42, height: 42);
+    } else if (card.isImage) {
+      content = Icon(
+        IconData(word.iconCodePoint, fontFamily: 'MaterialIcons'),
+        size: 42,
+      );
+    } else {
+      content = Text(
+        word.en,
+        style: Theme.of(context).textTheme.titleLarge
+            ?.copyWith(fontWeight: FontWeight.bold),
+      );
+    }
 
     return FilledButton(
       onPressed: onTap,

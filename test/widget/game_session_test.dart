@@ -43,13 +43,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final pairs = _visibleTreasurePairs(tester);
+    final pairs = _treasurePairsByHiddenKeys();
     expect(pairs, hasLength(6));
 
-    for (final pair in pairs.values) {
-      await tester.tap(find.byKey(ValueKey('card_${pair.imageIndex}')));
+    for (final indices in pairs.values) {
+      await tester.tap(_cardFinder(indices.first));
       await tester.pump();
-      await tester.tap(find.byKey(ValueKey('card_${pair.textIndex}')));
+      await tester.tap(_cardFinder(indices.last));
       await tester.pumpAndSettle();
     }
 
@@ -59,7 +59,48 @@ void main() {
     expect(snapshot.gameStats.treasureLastScore, snapshot.child.wallet.coins);
   });
 
-  testWidgets('firefighter plays prompt audio on each question', (
+  testWidgets('treasure cards stay blank until flipped', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userRepositoryProvider.overrideWithValue(FakeUserRepository(_zeroCoinSeed())),
+          wordBankProvider.overrideWithValue(_bank10()),
+          wordAudioPlayerProvider.overrideWithValue(SilentWordAudioPlayer()),
+        ],
+        child: const MaterialApp(home: _PushedPage(child: TreasurePage())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (var i = 0; i < 12; i++) {
+      expect(
+        find.descendant(of: _cardFinder(i), matching: find.byType(Icon)),
+        findsNothing,
+      );
+    }
+    for (final word in _bank10()) {
+      expect(find.text(word.en), findsNothing);
+    }
+
+    final firstPair = _treasurePairsByHiddenKeys().values.first;
+    await tester.tap(_cardFinder(firstPair.first));
+    await tester.pump();
+
+    final revealedCard = _cardFinder(firstPair.first);
+    final labels = tester
+        .widgetList<Text>(
+          find.descendant(of: revealedCard, matching: find.byType(Text)),
+        )
+        .map((text) => text.data)
+        .whereType<String>()
+        .where((text) => text.startsWith('w'));
+    final icons = tester.widgetList<Icon>(
+      find.descendant(of: revealedCard, matching: find.byType(Icon)),
+    );
+    expect(labels.isNotEmpty || icons.isNotEmpty, isTrue);
+  });
+
+  testWidgets('firefighter shows a replay control for the prompt audio', (
     tester,
   ) async {
     final audio = _RecordingAudioPlayer();
@@ -80,6 +121,29 @@ void main() {
 
     expect(audio.played, isNotEmpty);
     expect(audio.played.single, 'assets/audio/w');
+    expect(find.byKey(const ValueKey('prompt_replay_button')), findsOneWidget);
+    expect(find.byKey(const ValueKey('prompt_image')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('prompt_replay_button')));
+    await tester.pump();
+    expect(audio.played, hasLength(2));
+  });
+
+  testWidgets('monster still shows the prompt image', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userRepositoryProvider.overrideWithValue(FakeUserRepository(_zeroCoinSeed())),
+          wordBankProvider.overrideWithValue(_bank10()),
+          wordAudioPlayerProvider.overrideWithValue(SilentWordAudioPlayer()),
+        ],
+        child: const MaterialApp(home: MonsterPage()),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('prompt_image')), findsOneWidget);
+    expect(find.byKey(const ValueKey('prompt_replay_button')), findsNothing);
   });
 
   testWidgets('locked time after an answer pops game without next prompt', (
@@ -191,45 +255,24 @@ class _PushedPageState extends State<_PushedPage> {
   }
 }
 
-class _TreasurePair {
-  const _TreasurePair({required this.imageIndex, required this.textIndex});
+Finder _cardFinder(int index) => find.byKey(ValueKey('card_$index'));
 
-  final int imageIndex;
-  final int textIndex;
-}
+Map<String, List<int>> _treasurePairsByHiddenKeys() {
+  final pairs = <String, List<int>>{};
 
-Map<String, _TreasurePair> _visibleTreasurePairs(WidgetTester tester) {
-  final imageByWord = <String, int>{};
-  final textByWord = <String, int>{};
-
-  for (var i = 0; i < 12; i++) {
-    final card = find.byKey(ValueKey('card_$i'));
-    final texts = tester
-        .widgetList<Text>(
-          find.descendant(of: card, matching: find.byType(Text)),
-        )
-        .map((text) => text.data)
-        .whereType<String>();
-    final labels = texts.where((text) => text.startsWith('w')).toList();
-    if (labels.isNotEmpty) {
-      textByWord[labels.single] = i;
-      continue;
+  for (var cardIndex = 0; cardIndex < 12; cardIndex++) {
+    for (var wordIndex = 0; wordIndex < 10; wordIndex++) {
+      final wordId = 'w$wordIndex';
+      final hiddenKey = ValueKey('card_${cardIndex}_$wordId');
+      if (find.byKey(hiddenKey).evaluate().isEmpty) {
+        continue;
+      }
+      pairs.putIfAbsent(wordId, () => <int>[]).add(cardIndex);
+      break;
     }
-
-    final icons = tester.widgetList<Icon>(
-      find.descendant(of: card, matching: find.byType(Icon)),
-    );
-    final icon = icons.single;
-    imageByWord['w${icon.icon!.codePoint - _iconBase}'] = i;
   }
 
-  return {
-    for (final word in imageByWord.keys)
-      word: _TreasurePair(
-        imageIndex: imageByWord[word]!,
-        textIndex: textByWord[word]!,
-      ),
-  };
+  return pairs;
 }
 
 UserSnapshot _zeroCoinSeed() {
