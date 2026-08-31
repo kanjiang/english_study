@@ -1,9 +1,13 @@
+import 'package:english_app/domain/user/user_snapshot.dart';
+import 'package:english_app/features/parental/parent_gate.dart';
 import 'package:flutter/material.dart';
 
 class TimeLockPage extends StatelessWidget {
-  const TimeLockPage({super.key});
+  const TimeLockPage({required this.snapshot, super.key});
 
   static const copy = '今天的学习时间用完了，请爸爸妈妈来帮忙。';
+
+  final UserSnapshot snapshot;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +33,8 @@ class TimeLockPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 FilledButton(
-                  onPressed: () => _pushPlaceholder(context, '家长'),
+                  key: const Key('parent_entry'),
+                  onPressed: () => _pushParentGate(context),
                   child: const Text('家长'),
                 ),
               ],
@@ -40,13 +45,10 @@ class TimeLockPage extends StatelessWidget {
     );
   }
 
-  void _pushPlaceholder(BuildContext context, String title) {
+  void _pushParentGate(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: Text(title)),
-          body: Center(child: Text('$title（占位）')),
-        ),
+        builder: (context) => ParentGate(snapshot: snapshot),
       ),
     );
   }

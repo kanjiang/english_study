@@ -3,6 +3,7 @@ import 'package:english_app/features/avatar/kid_avatar.dart';
 import 'package:english_app/features/games/firefighter_page.dart';
 import 'package:english_app/features/games/monster_page.dart';
 import 'package:english_app/features/games/treasure_page.dart';
+import 'package:english_app/features/parental/parent_gate.dart';
 import 'package:english_app/features/shop/shop_page.dart';
 import 'package:flutter/material.dart';
 
@@ -22,7 +23,8 @@ class ChildHomePage extends StatelessWidget {
         title: const Text('小词星'),
         actions: [
           TextButton(
-            onPressed: () => _pushPlaceholder(context, '家长'),
+            key: const Key('parent_entry'),
+            onPressed: () => _pushParentGate(context),
             child: const Text('家长'),
           ),
         ],
@@ -76,20 +78,17 @@ class ChildHomePage extends StatelessWidget {
     );
   }
 
-  void _pushPlaceholder(BuildContext context, String title) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: Text(title)),
-          body: Center(child: Text('$title（占位）')),
-        ),
-      ),
-    );
-  }
-
   void _pushGame(BuildContext context, Widget page) {
     Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (context) => page));
+  }
+
+  void _pushParentGate(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => ParentGate(snapshot: snapshot),
+      ),
+    );
   }
 
   void _pushShop(BuildContext context) {

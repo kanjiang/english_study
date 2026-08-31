@@ -50,6 +50,7 @@ class PinGate {
     _failures += 1;
     if (_failures >= 5) {
       _lockedUntil = now.add(const Duration(minutes: 1));
+      return const PinTryResult(ok: false, errorKey: 'locked');
     }
 
     return const PinTryResult(ok: false, errorKey: 'wrong');

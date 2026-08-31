@@ -63,7 +63,7 @@ class _HomeWithLock extends StatelessWidget {
     return Stack(
       children: [
         ChildHomePage(snapshot: snapshot),
-        if (snapshot.time.isLocked) const TimeLockPage(),
+        if (snapshot.time.isLocked) TimeLockPage(snapshot: snapshot),
       ],
     );
   }
