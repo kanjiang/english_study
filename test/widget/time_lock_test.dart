@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:english_app/app.dart';
+import 'package:english_app/app/foreground_ticker.dart';
 import 'package:english_app/app/providers.dart';
 import 'package:english_app/data/user_repository.dart';
 import 'package:english_app/domain/shanghai_clock.dart';
@@ -99,6 +100,37 @@ void main() {
     expect(find.text('寻宝翻牌'), findsNothing);
     expect(repository.savedSnapshots, isNotEmpty);
   });
+
+  testWidgets('foreground ticker starts when profile appears after null', (
+    tester,
+  ) async {
+    final repository = FakeUserRepository.empty();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [userRepositoryProvider.overrideWithValue(repository)],
+        child: MaterialApp(
+          home: ForegroundTicker(
+            child: Consumer(
+              builder: (context, ref, child) {
+                final snapshot = ref.watch(foregroundUserSnapshotProvider);
+                return Text('used ${snapshot?.time.usedSeconds ?? -1}');
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('used -1'), findsOneWidget);
+
+    await repository.createInitial(seed());
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.text('used 2'), findsOneWidget);
+  });
 }
 
 class _LaggingSaveUserRepository implements UserRepository {
@@ -135,6 +167,14 @@ class _LaggingSaveUserRepository implements UserRepository {
   @override
   Future<void> save(UserSnapshot snapshot) async {
     savedSnapshots.add(snapshot);
+  }
+
+  @override
+  Future<void> saveTimeQuota(TimeQuota time) async {
+    final snapshot = _snapshot;
+    if (snapshot != null) {
+      savedSnapshots.add(snapshot.copyWith(time: time));
+    }
   }
 
   @override

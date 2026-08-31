@@ -43,12 +43,12 @@ class FlipCard {
   final bool matched;
 
   FlipCard copyWith({bool? faceUp, bool? matched}) => FlipCard(
-        index: index,
-        wordId: wordId,
-        isImage: isImage,
-        faceUp: faceUp ?? this.faceUp,
-        matched: matched ?? this.matched,
-      );
+    index: index,
+    wordId: wordId,
+    isImage: isImage,
+    faceUp: faceUp ?? this.faceUp,
+    matched: matched ?? this.matched,
+  );
 }
 
 class QuizEngine {
@@ -56,8 +56,8 @@ class QuizEngine {
     required this.kind,
     required List<QuizQuestion> questions,
     required List<FlipCard> cards,
-  })  : _questions = questions,
-        _cards = cards;
+  }) : _questions = questions,
+       _cards = cards;
 
   factory QuizEngine.start({
     required QuizKind kind,
@@ -73,20 +73,24 @@ class QuizEngine {
       final cards = <FlipCard>[];
       var i = 0;
       for (final word in six) {
-        cards.add(FlipCard(
-          index: i++,
-          wordId: word.id,
-          isImage: true,
-          faceUp: false,
-          matched: false,
-        ));
-        cards.add(FlipCard(
-          index: i++,
-          wordId: word.id,
-          isImage: false,
-          faceUp: false,
-          matched: false,
-        ));
+        cards.add(
+          FlipCard(
+            index: i++,
+            wordId: word.id,
+            isImage: true,
+            faceUp: false,
+            matched: false,
+          ),
+        );
+        cards.add(
+          FlipCard(
+            index: i++,
+            wordId: word.id,
+            isImage: false,
+            faceUp: false,
+            matched: false,
+          ),
+        );
       }
       cards.shuffle(random);
       final numbered = [
@@ -210,8 +214,6 @@ class QuizEngine {
       delta = 3 + (streak >= 3 ? 1 : 0);
       coinsEarned += delta;
     } else {
-      _cards[_openIndex!] = first.copyWith(faceUp: false);
-      _cards[cardIndex] = second.copyWith(faceUp: false);
       streak = 0;
     }
     _openIndex = null;
@@ -227,5 +229,17 @@ class QuizEngine {
       roundComplete: done,
       judged: true,
     );
+  }
+
+  void hideUnmatchedFaceUpCards() {
+    if (kind != QuizKind.flipMatch) {
+      throw StateError('flipMatch only');
+    }
+    for (var i = 0; i < _cards.length; i++) {
+      final card = _cards[i];
+      if (card.faceUp && !card.matched) {
+        _cards[i] = card.copyWith(faceUp: false);
+      }
+    }
   }
 }

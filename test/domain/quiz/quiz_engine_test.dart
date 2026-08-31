@@ -5,13 +5,13 @@ import 'package:english_app/domain/quiz/word.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Word w(String id) => Word(
-      id: id,
-      en: id,
-      zh: id,
-      category: 'animals',
-      iconCodePoint: 0xe91d,
-      audioAsset: 'assets/audio/beep.mp3',
-    );
+  id: id,
+  en: id,
+  zh: id,
+  category: 'animals',
+  iconCodePoint: 0xe91d,
+  audioAsset: 'assets/audio/beep.mp3',
+);
 
 List<Word> bank10() => List.generate(10, (i) => w('w$i'));
 
@@ -24,8 +24,10 @@ void main() {
     );
     expect(e.total, 10);
     expect(e.currentQuestion.choices, hasLength(4));
-    expect(e.currentQuestion.choices.map((c) => c.id),
-        contains(e.currentQuestion.prompt.id));
+    expect(
+      e.currentQuestion.choices.map((c) => c.id),
+      contains(e.currentQuestion.prompt.id),
+    );
   });
 
   test('correct answer awards 3 coins and advances', () {
@@ -50,7 +52,9 @@ void main() {
       random: Random(1),
     );
     final correct = e.currentQuestion.prompt.id;
-    final wrong = e.currentQuestion.choices.firstWhere((c) => c.id != correct).id;
+    final wrong = e.currentQuestion.choices
+        .firstWhere((c) => c.id != correct)
+        .id;
     final fb = e.submitAnswer(wrong);
     expect(fb.correct, isFalse);
     expect(fb.coinsDelta, 0);
@@ -80,8 +84,9 @@ void main() {
       random: Random(1),
     );
     final firstPrompt = e.currentQuestion.prompt.id;
-    final wrong =
-        e.currentQuestion.choices.firstWhere((c) => c.id != firstPrompt).id;
+    final wrong = e.currentQuestion.choices
+        .firstWhere((c) => c.id != firstPrompt)
+        .id;
     e.submitAnswer(wrong);
     expect(e.currentQuestion.prompt.id, isNot(firstPrompt));
   });
@@ -131,7 +136,7 @@ void main() {
     expect(e.cards[first.index].matched, isTrue);
   });
 
-  test('mismatch flips both back and resets streak', () {
+  test('mismatch stays visible until settled and resets streak', () {
     final e = QuizEngine.start(
       kind: QuizKind.flipMatch,
       bank: bank10(),
@@ -144,6 +149,11 @@ void main() {
     expect(fb.correct, isFalse);
     expect(fb.judged, isTrue);
     expect(e.streak, 0);
+    expect(e.cards[a.index].faceUp, isTrue);
+    expect(e.cards[b.index].faceUp, isTrue);
+
+    e.hideUnmatchedFaceUpCards();
+
     expect(e.cards[a.index].faceUp, isFalse);
     expect(e.cards[b.index].faceUp, isFalse);
   });

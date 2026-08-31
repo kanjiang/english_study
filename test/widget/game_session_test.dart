@@ -61,7 +61,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          userRepositoryProvider.overrideWithValue(FakeUserRepository(_zeroCoinSeed())),
+          userRepositoryProvider.overrideWithValue(
+            FakeUserRepository(_zeroCoinSeed()),
+          ),
           wordBankProvider.overrideWithValue(_bank10()),
           wordAudioPlayerProvider.overrideWithValue(SilentWordAudioPlayer()),
         ],
@@ -104,7 +106,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          userRepositoryProvider.overrideWithValue(FakeUserRepository(_zeroCoinSeed())),
+          userRepositoryProvider.overrideWithValue(
+            FakeUserRepository(_zeroCoinSeed()),
+          ),
           wordBankProvider.overrideWithValue(_bank10()),
           wordAudioPlayerProvider.overrideWithValue(SilentWordAudioPlayer()),
         ],
@@ -118,6 +122,77 @@ void main() {
     await tester.pump();
 
     expect(find.text('没配对！'), findsNothing);
+  });
+
+  testWidgets('treasure mismatch keeps both cards visible before hiding', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userRepositoryProvider.overrideWithValue(
+            FakeUserRepository(_zeroCoinSeed()),
+          ),
+          wordBankProvider.overrideWithValue(_bank10()),
+          wordAudioPlayerProvider.overrideWithValue(SilentWordAudioPlayer()),
+        ],
+        child: const MaterialApp(home: _PushedPage(child: TreasurePage())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final pairs = _treasurePairsByHiddenKeys();
+    final first = pairs.values.first.first;
+    final second = pairs.values.skip(1).first.first;
+    final third = pairs.values.skip(2).first.first;
+
+    await tester.tap(_cardFinder(first));
+    await tester.pump();
+    await tester.tap(_cardFinder(second));
+    await tester.pump();
+
+    expect(_cardHasContent(tester, first), isTrue);
+    expect(_cardHasContent(tester, second), isTrue);
+
+    await tester.tap(_cardFinder(third));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(_cardHasContent(tester, first), isTrue);
+    expect(_cardHasContent(tester, second), isTrue);
+    expect(_cardHasContent(tester, third), isFalse);
+
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(_cardHasContent(tester, first), isFalse);
+    expect(_cardHasContent(tester, second), isFalse);
+  });
+
+  testWidgets('first treasure flip does not pop when time locks', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userRepositoryProvider.overrideWithValue(
+            FakeUserRepository(_almostLockedSeed()),
+          ),
+          wordBankProvider.overrideWithValue(_bank10()),
+          wordAudioPlayerProvider.overrideWithValue(SilentWordAudioPlayer()),
+        ],
+        child: const XiaoCiXingApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('寻宝翻牌'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TreasurePage), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.tap(_cardFinder(0));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TreasurePage), findsOneWidget);
   });
 
   testWidgets('firefighter shows a replay control for the prompt audio', (
@@ -149,11 +224,15 @@ void main() {
     expect(audio.played, hasLength(2));
   });
 
-  testWidgets('monster still shows the prompt image', (tester) async {
+  testWidgets('monster shows prompt image without Chinese stem', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          userRepositoryProvider.overrideWithValue(FakeUserRepository(_zeroCoinSeed())),
+          userRepositoryProvider.overrideWithValue(
+            FakeUserRepository(_zeroCoinSeed()),
+          ),
           wordBankProvider.overrideWithValue(_bank10()),
           wordAudioPlayerProvider.overrideWithValue(SilentWordAudioPlayer()),
         ],
@@ -164,6 +243,7 @@ void main() {
 
     expect(find.byKey(const ValueKey('prompt_image')), findsOneWidget);
     expect(find.byKey(const ValueKey('prompt_replay_button')), findsNothing);
+    expect(find.textContaining('词'), findsNothing);
   });
 
   testWidgets('monster wrong answer shows feedback and advances', (
@@ -172,7 +252,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          userRepositoryProvider.overrideWithValue(FakeUserRepository(_zeroCoinSeed())),
+          userRepositoryProvider.overrideWithValue(
+            FakeUserRepository(_zeroCoinSeed()),
+          ),
           wordBankProvider.overrideWithValue(_bank10()),
           wordAudioPlayerProvider.overrideWithValue(SilentWordAudioPlayer()),
         ],
@@ -181,11 +263,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final promptFinder = find.textContaining('词');
-    expect(promptFinder, findsOneWidget);
-    final promptBefore = tester.widget<Text>(promptFinder).data!;
-    final promptIndex = int.parse(promptBefore.replaceFirst('词', ''));
-    final correctKey = ValueKey<String>('choice_w$promptIndex');
+    final promptBefore = _promptWordIndex(tester);
+    final correctKey = ValueKey<String>('choice_w$promptBefore');
 
     final choices = tester.widgetList<FilledButton>(find.byType(FilledButton));
     final wrongKey = choices
@@ -200,7 +279,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    final promptAfter = tester.widget<Text>(find.textContaining('词')).data!;
+    final promptAfter = _promptWordIndex(tester);
     expect(promptAfter, isNot(promptBefore));
   });
 
@@ -314,6 +393,24 @@ class _PushedPageState extends State<_PushedPage> {
 }
 
 Finder _cardFinder(int index) => find.byKey(ValueKey('card_$index'));
+
+bool _cardHasContent(WidgetTester tester, int index) {
+  final card = _cardFinder(index);
+  final icons = tester.widgetList<Icon>(
+    find.descendant(of: card, matching: find.byType(Icon)),
+  );
+  final labels = tester
+      .widgetList<Text>(find.descendant(of: card, matching: find.byType(Text)))
+      .map((text) => text.data)
+      .whereType<String>()
+      .where((text) => text.startsWith('w'));
+  return icons.isNotEmpty || labels.isNotEmpty;
+}
+
+int _promptWordIndex(WidgetTester tester) {
+  final icon = tester.widget<Icon>(find.byKey(const ValueKey('prompt_image')));
+  return icon.icon!.codePoint - _iconBase;
+}
 
 Map<String, List<int>> _treasurePairsByHiddenKeys() {
   final pairs = <String, List<int>>{};

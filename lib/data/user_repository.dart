@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:english_app/data/local_cache.dart';
 import 'package:english_app/domain/shanghai_clock.dart';
+import 'package:english_app/domain/time/time_quota.dart';
 import 'package:english_app/domain/user/sync_merge.dart';
 import 'package:english_app/domain/user/user_snapshot.dart';
 import 'package:english_app/domain/wallet/wallet.dart';
@@ -18,6 +19,8 @@ abstract class UserRepository {
   Future<void> createInitial(UserSnapshot snapshot);
 
   Future<void> save(UserSnapshot snapshot);
+
+  Future<void> saveTimeQuota(TimeQuota time);
 
   Future<void> purchase(ShopItem item);
 
@@ -49,7 +52,10 @@ UserSnapshot _copySnapshotWithCoins(UserSnapshot snapshot, int coins) {
   );
 }
 
-UserSnapshot _mergePendingIntoSnapshot(UserSnapshot snapshot, int pendingCoins) {
+UserSnapshot _mergePendingIntoSnapshot(
+  UserSnapshot snapshot,
+  int pendingCoins,
+) {
   final mergedCoins = mergeCoins(
     cloudCoins: snapshot.child.wallet.coins,
     pendingLegalReward: pendingCoins,
@@ -57,7 +63,10 @@ UserSnapshot _mergePendingIntoSnapshot(UserSnapshot snapshot, int pendingCoins) 
   return _copySnapshotWithCoins(snapshot, mergedCoins);
 }
 
-UserSnapshot _stripPendingFromSnapshot(UserSnapshot snapshot, int pendingCoins) {
+UserSnapshot _stripPendingFromSnapshot(
+  UserSnapshot snapshot,
+  int pendingCoins,
+) {
   final pending = pendingCoins < 0 ? 0 : pendingCoins;
   final cloudCoins = snapshot.child.wallet.coins - pending;
   return _copySnapshotWithCoins(snapshot, cloudCoins < 0 ? 0 : cloudCoins);
@@ -101,6 +110,23 @@ class FakeUserRepository implements UserRepository {
   @override
   Future<void> save(UserSnapshot snapshot) async {
     _snapshot = _stripPendingFromSnapshot(snapshot, _pendingCoins);
+    _controller.add(_visibleSnapshot(_snapshot));
+  }
+
+  @override
+  Future<void> saveTimeQuota(TimeQuota time) async {
+    final snapshot = _snapshot;
+    if (snapshot == null) {
+      return;
+    }
+    _snapshot = snapshot.copyWith(
+      time: TimeQuota(
+        dailyLimitMinutes: snapshot.time.dailyLimitMinutes,
+        bonusMinutes: time.bonusMinutes,
+        usedSeconds: time.usedSeconds,
+        usedOnDate: time.usedOnDate,
+      ),
+    );
     _controller.add(_visibleSnapshot(_snapshot));
   }
 
@@ -178,38 +204,42 @@ class FirestoreUserRepository implements UserRepository {
 
   String? get _uid => _auth.currentUser?.uid;
 
+  DocumentReference<Map<String, dynamic>> _userDocForUid(String uid) {
+    return _db.collection('users').doc(uid);
+  }
+
   DocumentReference<Map<String, dynamic>>? get _userDoc {
     final uid = _uid;
     if (uid == null) {
       return null;
     }
-    return _db.collection('users').doc(uid);
+    return _userDocForUid(uid);
   }
 
   @override
   Stream<UserSnapshot?> watch() {
-    final uid = _uid;
-    final doc = _userDoc;
-
-    if (uid == null || doc == null) {
-      return Stream<UserSnapshot?>.value(null);
-    }
-
-    return doc.snapshots().asyncMap((snapshot) async {
-      if (!snapshot.exists) {
-        return _loadDisplayedLocalSnapshotForUid(uid);
+    return _auth.authStateChanges().asyncExpand((user) {
+      final uid = user?.uid;
+      if (uid == null) {
+        return Stream<UserSnapshot?>.value(null);
       }
 
-      final data = snapshot.data();
-      if (data == null) {
-        return _loadDisplayedLocalSnapshotForUid(uid);
-      }
+      return _userDocForUid(uid).snapshots().asyncMap((snapshot) async {
+        if (!snapshot.exists) {
+          return _loadDisplayedLocalSnapshotForUid(uid);
+        }
 
-      final merged = await _mergeRemoteSnapshot(
-        UserSnapshot.fromMap(uid, data),
-      );
-      await _persistLocalDisplayedSnapshot(merged);
-      return merged;
+        final data = snapshot.data();
+        if (data == null) {
+          return _loadDisplayedLocalSnapshotForUid(uid);
+        }
+
+        final merged = await _mergeRemoteSnapshot(
+          UserSnapshot.fromMap(uid, data),
+        );
+        await _persistLocalDisplayedSnapshot(merged);
+        return merged;
+      });
     });
   }
 
@@ -274,6 +304,46 @@ class FirestoreUserRepository implements UserRepository {
       await doc.set(cloudSnapshot.toMap());
     } catch (_) {
       await _cache.saveUsedSeconds(snapshot.time.usedSeconds);
+    }
+  }
+
+  @override
+  Future<void> saveTimeQuota(TimeQuota time) async {
+    final uid = _uid;
+    final doc = _userDoc;
+
+    if (uid != null) {
+      final local = await _loadLocalSnapshotForUid(uid);
+      if (local != null) {
+        await _persistLocalCloudSnapshot(
+          local.copyWith(
+            time: TimeQuota(
+              dailyLimitMinutes: local.time.dailyLimitMinutes,
+              bonusMinutes: time.bonusMinutes,
+              usedSeconds: time.usedSeconds,
+              usedOnDate: time.usedOnDate,
+            ),
+          ),
+        );
+      } else {
+        await _cache.saveUsedSeconds(time.usedSeconds);
+      }
+    } else {
+      await _cache.saveUsedSeconds(time.usedSeconds);
+    }
+
+    if (doc == null) {
+      return;
+    }
+
+    try {
+      await doc.update({
+        'time.bonusMinutes': time.bonusMinutes,
+        'time.usedSeconds': time.usedSeconds,
+        'time.usedOnDate': time.usedOnDate,
+      });
+    } catch (_) {
+      await _cache.saveUsedSeconds(time.usedSeconds);
     }
   }
 

@@ -1,4 +1,6 @@
-// ignore_for_file: subtype_of_sealed_class
+// ignore_for_file: must_be_immutable, prefer_initializing_formals, subtype_of_sealed_class
+
+import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:english_app/data/local_cache.dart';
@@ -42,21 +44,51 @@ void main() {
     );
   });
 
-  test('watch and load ignore cached snapshot for a different signed-in uid', () async {
-    final cache = LocalCache();
-    await cache.saveSnapshot(seed());
+  test(
+    'watch and load ignore cached snapshot for a different signed-in uid',
+    () async {
+      final cache = LocalCache();
+      await cache.saveSnapshot(seed());
 
+      final repo = FirestoreUserRepository(
+        auth: _FakeFirebaseAuth(uid: 'u2'),
+        db: _FakeFirebaseFirestore.missingUser(),
+        cache: cache,
+      );
+
+      await expectLater(
+        repo.watch().first.timeout(const Duration(seconds: 1)),
+        completion(isNull),
+      );
+      expect(await repo.load(), isNull);
+    },
+  );
+
+  test('firestore watch follows auth state after later sign-in', () async {
+    final cache = LocalCache();
+    final auth = _FakeFirebaseAuth();
+    final document = _FakeDocumentReference();
     final repo = FirestoreUserRepository(
-      auth: _FakeFirebaseAuth(uid: 'u2'),
-      db: _FakeFirebaseFirestore.missingUser(),
+      auth: auth,
+      db: _FakeFirebaseFirestore(document: document),
       cache: cache,
     );
+    final events = <UserSnapshot?>[];
 
-    await expectLater(
-      repo.watch().first.timeout(const Duration(seconds: 1)),
-      completion(isNull),
-    );
-    expect(await repo.load(), isNull);
+    final subscription = repo.watch().listen(events.add);
+    await Future<void>.delayed(Duration.zero);
+
+    auth.signIn('u1');
+    await Future<void>.delayed(Duration.zero);
+    document.emit(seed().toMap());
+    await Future<void>.delayed(Duration.zero);
+
+    expect(events, contains(isNull));
+    expect(events.whereType<UserSnapshot>().single.uid, 'u1');
+
+    await subscription.cancel();
+    auth.dispose();
+    document.dispose();
   });
 
   test('createInitial and save update load and watch', () async {
@@ -91,6 +123,27 @@ void main() {
     expect(events, [0, 12]);
 
     await subscription.cancel();
+  });
+
+  test('saveTimeQuota preserves wallet and daily limit fields', () async {
+    final repo = FakeUserRepository(seed());
+
+    await repo.saveTimeQuota(
+      TimeQuota(
+        dailyLimitMinutes: 20,
+        bonusMinutes: 10,
+        usedSeconds: 45,
+        usedOnDate: '2026-08-26',
+      ),
+    );
+
+    final loaded = await repo.load();
+
+    expect(loaded!.child.wallet.coins, 40);
+    expect(loaded.time.dailyLimitMinutes, 30);
+    expect(loaded.time.bonusMinutes, 10);
+    expect(loaded.time.usedSeconds, 45);
+    expect(loaded.time.usedOnDate, '2026-08-26');
   });
 
   test('purchase deducts coins and failed purchase leaves coins', () async {
@@ -173,54 +226,85 @@ void main() {
     expect((await repo.load())!.child.wallet.coins, 60);
   });
 
-  test('save persists cloud coins without double-counting pending coins', () async {
-    final repo = FakeUserRepository(seed());
+  test(
+    'save persists cloud coins without double-counting pending coins',
+    () async {
+      final repo = FakeUserRepository(seed());
 
-    await repo.addPendingCoins(20);
+      await repo.addPendingCoins(20);
 
-    final loaded = await repo.load();
-    expect(loaded, isNotNull);
-    expect(loaded!.child.wallet.coins, 60);
+      final loaded = await repo.load();
+      expect(loaded, isNotNull);
+      expect(loaded!.child.wallet.coins, 60);
 
-    await repo.save(
-      loaded.copyWith(
-        time: TimeQuota(
-          dailyLimitMinutes: loaded.time.dailyLimitMinutes,
-          bonusMinutes: loaded.time.bonusMinutes,
-          usedSeconds: loaded.time.usedSeconds + 5,
-          usedOnDate: loaded.time.usedOnDate,
+      await repo.save(
+        loaded.copyWith(
+          time: TimeQuota(
+            dailyLimitMinutes: loaded.time.dailyLimitMinutes,
+            bonusMinutes: loaded.time.bonusMinutes,
+            usedSeconds: loaded.time.usedSeconds + 5,
+            usedOnDate: loaded.time.usedOnDate,
+          ),
         ),
-      ),
-    );
+      );
 
-    expect((await repo.load())!.child.wallet.coins, 60);
+      expect((await repo.load())!.child.wallet.coins, 60);
 
-    await repo.flushPendingCoins();
+      await repo.flushPendingCoins();
 
-    expect((await repo.load())!.child.wallet.coins, 60);
-  });
+      expect((await repo.load())!.child.wallet.coins, 60);
+    },
+  );
 }
 
 class _FakeFirebaseAuth implements FirebaseAuth {
-  _FakeFirebaseAuth({this.uid});
+  _FakeFirebaseAuth({String? uid}) : _uid = uid;
 
-  final String? uid;
+  final StreamController<User?> _controller = StreamController<User?>.broadcast(
+    sync: true,
+  );
+  String? _uid;
 
   @override
-  User? get currentUser => uid == null ? null : _FakeUser(uid!);
+  User? get currentUser => _uid == null ? null : _FakeUser(_uid!);
+
+  @override
+  Stream<User?> authStateChanges() {
+    return Stream<User?>.multi((controller) {
+      controller.add(currentUser);
+      final subscription = _controller.stream.listen(
+        controller.add,
+        onError: controller.addError,
+        onDone: controller.close,
+      );
+      controller.onCancel = subscription.cancel;
+    });
+  }
+
+  void signIn(String uid) {
+    _uid = uid;
+    _controller.add(currentUser);
+  }
+
+  void dispose() {
+    _controller.close();
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _FakeFirebaseFirestore implements FirebaseFirestore {
-  _FakeFirebaseFirestore();
+  _FakeFirebaseFirestore({_FakeDocumentReference? document})
+    : _document = document ?? _FakeDocumentReference();
 
-  _FakeFirebaseFirestore.missingUser();
+  _FakeFirebaseFirestore.missingUser() : _document = _FakeDocumentReference();
+
+  final _FakeDocumentReference _document;
 
   @override
   CollectionReference<Map<String, dynamic>> collection(String path) {
-    return _FakeCollectionReference();
+    return _FakeCollectionReference(_document);
   }
 
   @override
@@ -241,9 +325,13 @@ class _FakeUser implements User {
 
 class _FakeCollectionReference
     implements CollectionReference<Map<String, dynamic>> {
+  _FakeCollectionReference(this._document);
+
+  final _FakeDocumentReference _document;
+
   @override
   DocumentReference<Map<String, dynamic>> doc([String? path]) {
-    return _FakeDocumentReference();
+    return _document;
   }
 
   @override
@@ -252,9 +340,17 @@ class _FakeCollectionReference
 
 class _FakeDocumentReference
     implements DocumentReference<Map<String, dynamic>> {
+  final StreamController<DocumentSnapshot<Map<String, dynamic>>> _controller =
+      StreamController<DocumentSnapshot<Map<String, dynamic>>>.broadcast(
+        sync: true,
+      );
+  DocumentSnapshot<Map<String, dynamic>> _snapshot = _FakeDocumentSnapshot();
+
   @override
-  Future<DocumentSnapshot<Map<String, dynamic>>> get([GetOptions? options]) async {
-    return _FakeDocumentSnapshot();
+  Future<DocumentSnapshot<Map<String, dynamic>>> get([
+    GetOptions? options,
+  ]) async {
+    return _snapshot;
   }
 
   @override
@@ -262,7 +358,24 @@ class _FakeDocumentReference
     bool includeMetadataChanges = false,
     ListenSource source = ListenSource.defaultSource,
   }) {
-    return Stream.value(_FakeDocumentSnapshot());
+    return Stream<DocumentSnapshot<Map<String, dynamic>>>.multi((controller) {
+      controller.add(_snapshot);
+      final subscription = _controller.stream.listen(
+        controller.add,
+        onError: controller.addError,
+        onDone: controller.close,
+      );
+      controller.onCancel = subscription.cancel;
+    });
+  }
+
+  void emit(Map<String, dynamic> data) {
+    _snapshot = _FakeDocumentSnapshot(data: data);
+    _controller.add(_snapshot);
+  }
+
+  void dispose() {
+    _controller.close();
   }
 
   @override
@@ -270,11 +383,15 @@ class _FakeDocumentReference
 }
 
 class _FakeDocumentSnapshot implements DocumentSnapshot<Map<String, dynamic>> {
-  @override
-  bool get exists => false;
+  _FakeDocumentSnapshot({Map<String, dynamic>? data}) : _data = data;
+
+  final Map<String, dynamic>? _data;
 
   @override
-  Map<String, dynamic>? data() => null;
+  bool get exists => _data != null;
+
+  @override
+  Map<String, dynamic>? data() => _data;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

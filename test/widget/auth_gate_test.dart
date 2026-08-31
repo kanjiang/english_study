@@ -2,6 +2,7 @@ import 'package:english_app/app.dart';
 import 'package:english_app/app/providers.dart';
 import 'package:english_app/data/user_repository.dart';
 import 'package:english_app/features/auth/onboarding_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,7 +28,7 @@ void main() {
     expect(find.text('登录'), findsWidgets);
   });
 
-  testWidgets('onboarding returns to caller after creating profile', (
+  testWidgets('signed-in empty profile shows onboarding in auth gate', (
     tester,
   ) async {
     final repository = FakeUserRepository.empty();
@@ -36,7 +37,35 @@ void main() {
       ProviderScope(
         overrides: [
           userRepositoryProvider.overrideWithValue(repository),
+          firebaseAuthStateProvider.overrideWith(
+            (ref) => Stream<User?>.value(_FakeUser('u1')),
+          ),
         ],
+        child: const XiaoCiXingApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OnboardingPage), findsOneWidget);
+    expect(find.text('登录 / 注册'), findsNothing);
+
+    await tester.enterText(find.byType(TextField).first, '豆豆');
+    await tester.enterText(find.byType(TextField).last, '123456');
+    await tester.tap(find.text('完成建档'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(OnboardingPage), findsNothing);
+    expect(find.text('寻宝翻牌'), findsOneWidget);
+  });
+
+  testWidgets('onboarding returns to caller after creating profile', (
+    tester,
+  ) async {
+    final repository = FakeUserRepository.empty();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [userRepositoryProvider.overrideWithValue(repository)],
         child: const MaterialApp(home: _OnboardingHost()),
       ),
     );
@@ -67,11 +96,9 @@ class _OnboardingHostState extends State<_OnboardingHost> {
       if (!mounted) {
         return;
       }
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const OnboardingPage(),
-        ),
-      );
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute<void>(builder: (_) => const OnboardingPage()));
     });
   }
 
@@ -79,4 +106,16 @@ class _OnboardingHostState extends State<_OnboardingHost> {
   Widget build(BuildContext context) {
     return const Scaffold(body: Center(child: Text('返回壳')));
   }
+}
+
+class _FakeUser implements User {
+  _FakeUser(this._uid);
+
+  final String _uid;
+
+  @override
+  String get uid => _uid;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

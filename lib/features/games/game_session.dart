@@ -141,21 +141,21 @@ class _GameSessionState extends ConsumerState<GameSession> {
                 else
                   Icon(
                     key: const ValueKey('prompt_image'),
-                    _materialIconData(
-                      question.prompt.iconCodePoint,
-                    ),
+                    _materialIconData(question.prompt.iconCodePoint),
                     size: 96,
                     color: widget.theme.foregroundColor,
                   ),
-                const SizedBox(height: 16),
-                Text(
-                  isListening ? '听一听，选择正确图片' : question.prompt.zh,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: widget.theme.foregroundColor,
-                    fontWeight: FontWeight.bold,
+                if (isListening) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    '听一听，选择正确图片',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: widget.theme.foregroundColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -172,12 +172,7 @@ class _GameSessionState extends ConsumerState<GameSession> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: isListening
-                  ? Icon(
-                      _materialIconData(
-                        choice.iconCodePoint,
-                      ),
-                      size: 36,
-                    )
+                  ? Icon(_materialIconData(choice.iconCodePoint), size: 36)
                   : Text(
                       choice.en,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -211,6 +206,22 @@ class _GameSessionState extends ConsumerState<GameSession> {
       }
     }
 
+    if (widget.kind == QuizKind.flipMatch &&
+        feedback.judged &&
+        !feedback.correct &&
+        !feedback.roundComplete) {
+      _settling = true;
+      if (mounted) {
+        setState(() {});
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      _engine.hideUnmatchedFaceUpCards();
+      _settling = false;
+      if (mounted) {
+        setState(() {});
+      }
+    }
+
     final foreground = ref.read(foregroundUserSnapshotProvider);
     final lockedForeground = foreground != null && foreground.time.isLocked
         ? foreground
@@ -221,7 +232,7 @@ class _GameSessionState extends ConsumerState<GameSession> {
       return;
     }
 
-    if (foreground?.time.isLocked ?? false) {
+    if (feedback.judged && (foreground?.time.isLocked ?? false)) {
       await _settleAndPop(lockedSnapshot: foreground);
       return;
     }
@@ -330,10 +341,7 @@ class _TreasureCard extends StatelessWidget {
     if (!isRevealed) {
       content = const SizedBox(width: 42, height: 42);
     } else if (card.isImage) {
-      content = Icon(
-        _materialIconData(word.iconCodePoint),
-        size: 42,
-      );
+      content = Icon(_materialIconData(word.iconCodePoint), size: 42);
     } else {
       content = Text(
         word.en,

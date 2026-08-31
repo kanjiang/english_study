@@ -139,7 +139,7 @@ class _ForegroundTickerState extends ConsumerState<ForegroundTicker>
 
     _saving = true;
     try {
-      await ref.read(userRepositoryProvider).save(snapshot);
+      await ref.read(userRepositoryProvider).saveTimeQuota(snapshot.time);
       final current = _snapshot;
       final savedTime = snapshot.time;
       final currentTime = current?.time;

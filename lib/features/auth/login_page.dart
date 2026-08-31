@@ -1,5 +1,3 @@
-import 'package:english_app/app/providers.dart';
-import 'package:english_app/features/auth/onboarding_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -181,9 +179,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Future<void> _goToNextStep() async {
-    final repository = ref.read(userRepositoryProvider);
-    final existing = await repository.load();
-
     if (!mounted) {
       return;
     }
@@ -191,12 +186,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     setState(() {
       _submitting = false;
     });
-
-    if (existing == null) {
-      await Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const OnboardingPage()),
-      );
-    }
   }
 
   void _setAuthError(String? code) {
