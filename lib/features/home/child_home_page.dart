@@ -3,6 +3,7 @@ import 'package:english_app/features/avatar/kid_avatar.dart';
 import 'package:english_app/features/games/firefighter_page.dart';
 import 'package:english_app/features/games/monster_page.dart';
 import 'package:english_app/features/games/treasure_page.dart';
+import 'package:english_app/features/shop/shop_page.dart';
 import 'package:flutter/material.dart';
 
 class ChildHomePage extends StatelessWidget {
@@ -33,9 +34,7 @@ class ChildHomePage extends StatelessWidget {
             Center(
               child: KidAvatar(
                 equipped: snapshot.child.wallet.equipped,
-                onTap: snapshot.time.isLocked
-                    ? null
-                    : () => _pushPlaceholder(context, '商店'),
+                onTap: snapshot.time.isLocked ? null : () => _pushShop(context),
               ),
             ),
             const SizedBox(height: 16),
@@ -91,6 +90,14 @@ class ChildHomePage extends StatelessWidget {
   void _pushGame(BuildContext context, Widget page) {
     Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (context) => page));
+  }
+
+  void _pushShop(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => ShopPage(initialSnapshot: snapshot),
+      ),
+    );
   }
 }
 
