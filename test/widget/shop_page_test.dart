@@ -89,7 +89,7 @@ void main() {
   ) async {
     final repository = _AlreadyOwnedRefreshRepository(
       seed(),
-      _ownedAndEquippedHatSeed(),
+      _ownedHatSeed(),
     );
 
     await tester.pumpWidget(_buildShop(repository, seed()));
@@ -101,6 +101,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('已经买过了'), findsOneWidget);
+    expect(find.byKey(const Key('buy_hat_20')), findsNothing);
+    expect(find.text('穿上'), findsOneWidget);
   });
 }
 
@@ -151,8 +153,8 @@ UserSnapshot _ownedAndEquippedHatSeed() {
 }
 
 class _AlreadyOwnedRefreshRepository extends FakeUserRepository {
-  _AlreadyOwnedRefreshRepository(this._latestSnapshot, UserSnapshot initial)
-    : super(initial);
+  _AlreadyOwnedRefreshRepository(UserSnapshot initialSnapshot, this._latestSnapshot)
+    : super(initialSnapshot);
 
   final UserSnapshot _latestSnapshot;
   bool _refreshAfterPurchase = false;
