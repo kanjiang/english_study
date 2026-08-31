@@ -1,12 +1,12 @@
 import 'package:english_app/domain/user/user_snapshot.dart';
 import 'package:english_app/features/avatar/kid_avatar.dart';
+import 'package:english_app/features/games/firefighter_page.dart';
+import 'package:english_app/features/games/monster_page.dart';
+import 'package:english_app/features/games/treasure_page.dart';
 import 'package:flutter/material.dart';
 
 class ChildHomePage extends StatelessWidget {
-  const ChildHomePage({
-    required this.snapshot,
-    super.key,
-  });
+  const ChildHomePage({required this.snapshot, super.key});
 
   final UserSnapshot snapshot;
 
@@ -60,15 +60,15 @@ class ChildHomePage extends StatelessWidget {
             if (!snapshot.time.isLocked) ...[
               _GameButton(
                 label: '寻宝翻牌',
-                onPressed: () => _pushPlaceholder(context, '寻宝翻牌'),
+                onPressed: () => _pushGame(context, const TreasurePage()),
               ),
               _GameButton(
                 label: '消防员灭火',
-                onPressed: () => _pushPlaceholder(context, '消防员灭火'),
+                onPressed: () => _pushGame(context, const FirefighterPage()),
               ),
               _GameButton(
                 label: '打怪兽',
-                onPressed: () => _pushPlaceholder(context, '打怪兽'),
+                onPressed: () => _pushGame(context, const MonsterPage()),
               ),
             ],
           ],
@@ -87,13 +87,15 @@ class ChildHomePage extends StatelessWidget {
       ),
     );
   }
+
+  void _pushGame(BuildContext context, Widget page) {
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (context) => page));
+  }
 }
 
 class _GameButton extends StatelessWidget {
-  const _GameButton({
-    required this.label,
-    required this.onPressed,
-  });
+  const _GameButton({required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback onPressed;
@@ -102,10 +104,7 @@ class _GameButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: FilledButton(
-        onPressed: onPressed,
-        child: Text(label),
-      ),
+      child: FilledButton(onPressed: onPressed, child: Text(label)),
     );
   }
 }
