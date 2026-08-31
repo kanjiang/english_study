@@ -162,7 +162,13 @@ class _ParentZonePageState extends ConsumerState<ParentZonePage> {
       return;
     }
 
-    await _tryReauthenticate(_emailPasswordController.text);
+    final reauthenticated = await _tryReauthenticate(
+      _emailPasswordController.text,
+    );
+    if (!reauthenticated) {
+      return;
+    }
+
     try {
       await _currentUser()?.verifyBeforeUpdateEmail(email);
     } catch (_) {}
@@ -177,6 +183,11 @@ class _ParentZonePageState extends ConsumerState<ParentZonePage> {
       return;
     }
 
+    final reauthenticated = await _tryReauthenticate(_phoneCodeController.text);
+    if (!reauthenticated) {
+      return;
+    }
+
     await _saveSnapshot(snapshot.copyWith(phone: phone), message: '手机号已保存');
   }
 
@@ -187,7 +198,11 @@ class _ParentZonePageState extends ConsumerState<ParentZonePage> {
       return;
     }
 
-    await _tryReauthenticate(_resetProofController.text);
+    final reauthenticated = await _tryReauthenticate(_resetProofController.text);
+    if (!reauthenticated) {
+      return;
+    }
+
     await _saveSnapshot(
       snapshot.copyWith(
         parentPinHash: hashParentPin(uid: snapshot.uid, pin: pin),
@@ -218,18 +233,33 @@ class _ParentZonePageState extends ConsumerState<ParentZonePage> {
     _showMessage(message);
   }
 
-  Future<void> _tryReauthenticate(String proof) async {
+  Future<bool> _tryReauthenticate(String proof) async {
+    final normalizedProof = proof.trim();
+    if (normalizedProof.isEmpty) {
+      _showMessage('请输入当前登录密码或验证码');
+      return false;
+    }
+
     final user = _currentUser();
+    if (user == null) {
+      return true;
+    }
+
     final email = user?.email;
-    if (user == null || email == null || email.isEmpty || proof.isEmpty) {
-      return;
+    if (email == null || email.isEmpty) {
+      _showMessage('重新验证失败，请重试');
+      return false;
     }
 
     try {
       await user.reauthenticateWithCredential(
-        EmailAuthProvider.credential(email: email, password: proof),
+        EmailAuthProvider.credential(email: email, password: normalizedProof),
       );
-    } catch (_) {}
+      return true;
+    } catch (_) {
+      _showMessage('重新验证失败，请重试');
+      return false;
+    }
   }
 
   User? _currentUser() {

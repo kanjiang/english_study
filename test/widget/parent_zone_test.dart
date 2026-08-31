@@ -90,6 +90,36 @@ void main() {
 
     expect(find.text('请 1 分钟后再试'), findsOneWidget);
   });
+
+  testWidgets('forgot PIN with empty proof does not unlock or change hash', (
+    tester,
+  ) async {
+    final snapshot = _pinSeed();
+    final repository = FakeUserRepository(snapshot);
+
+    await tester.pumpWidget(_buildApp(repository));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('parent_entry')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('忘记家长密码'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('forgot_parent_new_pin_input')),
+      '654321',
+    );
+    await tester.tap(find.text('重置家长密码'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('请输入当前登录密码或验证码'), findsOneWidget);
+    expect(find.text('忘记家长密码'), findsOneWidget);
+    expect(find.text('加时 10 分钟'), findsNothing);
+    expect(
+      (await repository.load())!.parentPinHash,
+      hashParentPin(uid: snapshot.uid, pin: '123456'),
+    );
+  });
 }
 
 Widget _buildApp(UserRepository repository) {

@@ -181,7 +181,17 @@ class _ParentGateState extends ConsumerState<ParentGate> {
       _errorText = null;
     });
 
-    await _tryReauthenticate(_proofController.text);
+    final reauthenticated = await _tryReauthenticate(_proofController.text);
+    if (!mounted) {
+      return;
+    }
+    if (!reauthenticated) {
+      setState(() {
+        _saving = false;
+      });
+      return;
+    }
+
     final updated = _snapshot.copyWith(
       parentPinHash: hashParentPin(uid: _snapshot.uid, pin: pin),
     );
@@ -199,18 +209,39 @@ class _ParentGateState extends ConsumerState<ParentGate> {
     });
   }
 
-  Future<void> _tryReauthenticate(String proof) async {
+  Future<bool> _tryReauthenticate(String proof) async {
+    final normalizedProof = proof.trim();
+    if (normalizedProof.isEmpty) {
+      setState(() {
+        _errorText = '请输入当前登录密码或验证码';
+      });
+      return false;
+    }
+
     final user = _currentUser();
+    if (user == null) {
+      return true;
+    }
+
     final email = user?.email;
-    if (user == null || email == null || email.isEmpty || proof.isEmpty) {
-      return;
+    if (email == null || email.isEmpty) {
+      setState(() {
+        _errorText = '重新验证失败，请重试';
+      });
+      return false;
     }
 
     try {
       await user.reauthenticateWithCredential(
-        EmailAuthProvider.credential(email: email, password: proof),
+        EmailAuthProvider.credential(email: email, password: normalizedProof),
       );
-    } catch (_) {}
+      return true;
+    } catch (_) {
+      setState(() {
+        _errorText = '重新验证失败，请重试';
+      });
+      return false;
+    }
   }
 
   User? _currentUser() {
