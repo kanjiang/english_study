@@ -52,10 +52,9 @@ class FlipCard {
 class QuizEngine {
   QuizEngine._({
     required this.kind,
-    required List<QuizQuestion> questions,
-    required List<FlipCard> cards,
-  })  : _questions = questions,
-        _cards = cards;
+    required this._questions,
+    required this._cards,
+  });
 
   factory QuizEngine.start({
     required QuizKind kind,

@@ -223,7 +223,7 @@ class _ParentGateState extends ConsumerState<ParentGate> {
       return true;
     }
 
-    final email = user?.email;
+    final email = user.email;
     if (email == null || email.isEmpty) {
       setState(() {
         _errorText = '重新验证失败，请重试';

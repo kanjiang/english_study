@@ -137,24 +137,11 @@ UserSnapshot _ownedHatSeed() {
   );
 }
 
-UserSnapshot _ownedAndEquippedHatSeed() {
-  final seeded = seed();
-  return seeded.copyWith(
-    child: ChildProfile(
-      name: seeded.child.name,
-      avatarId: seeded.child.avatarId,
-      wallet: Wallet(
-        coins: seeded.child.wallet.coins,
-        ownedItemIds: const {'hat_20'},
-        equipped: const Equipped(hat: 'hat_20'),
-      ),
-    ),
-  );
-}
-
 class _AlreadyOwnedRefreshRepository extends FakeUserRepository {
-  _AlreadyOwnedRefreshRepository(UserSnapshot initialSnapshot, this._latestSnapshot)
-    : super(initialSnapshot);
+  _AlreadyOwnedRefreshRepository(
+    super.initialSnapshot,
+    this._latestSnapshot,
+  );
 
   final UserSnapshot _latestSnapshot;
   bool _refreshAfterPurchase = false;

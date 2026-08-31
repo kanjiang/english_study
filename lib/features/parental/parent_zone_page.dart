@@ -245,7 +245,7 @@ class _ParentZonePageState extends ConsumerState<ParentZonePage> {
       return true;
     }
 
-    final email = user?.email;
+    final email = user.email;
     if (email == null || email.isEmpty) {
       _showMessage('重新验证失败，请重试');
       return false;

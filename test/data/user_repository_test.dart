@@ -1,4 +1,4 @@
-import 'dart:convert';
+// ignore_for_file: subtype_of_sealed_class
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:english_app/data/local_cache.dart';

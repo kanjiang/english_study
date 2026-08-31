@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:english_app/app.dart';
 import 'package:english_app/app/providers.dart';
 import 'package:english_app/data/user_repository.dart';

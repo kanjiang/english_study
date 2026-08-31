@@ -1,3 +1,5 @@
+// ignore_for_file: non_const_argument_for_const_parameter
+
 import 'dart:async';
 import 'dart:math';
 
@@ -139,9 +141,8 @@ class _GameSessionState extends ConsumerState<GameSession> {
                 else
                   Icon(
                     key: const ValueKey('prompt_image'),
-                    IconData(
+                    _materialIconData(
                       question.prompt.iconCodePoint,
-                      fontFamily: 'MaterialIcons',
                     ),
                     size: 96,
                     color: widget.theme.foregroundColor,
@@ -172,9 +173,8 @@ class _GameSessionState extends ConsumerState<GameSession> {
               ),
               child: isListening
                   ? Icon(
-                      IconData(
+                      _materialIconData(
                         choice.iconCodePoint,
-                        fontFamily: 'MaterialIcons',
                       ),
                       size: 36,
                     )
@@ -331,7 +331,7 @@ class _TreasureCard extends StatelessWidget {
       content = const SizedBox(width: 42, height: 42);
     } else if (card.isImage) {
       content = Icon(
-        IconData(word.iconCodePoint, fontFamily: 'MaterialIcons'),
+        _materialIconData(word.iconCodePoint),
         size: 42,
       );
     } else {
@@ -356,4 +356,8 @@ class _TreasureCard extends StatelessWidget {
       ),
     );
   }
+}
+
+IconData _materialIconData(int codePoint) {
+  return IconData(codePoint, fontFamily: 'MaterialIcons');
 }

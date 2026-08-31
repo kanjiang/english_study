@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -223,12 +225,12 @@ class FirestoreUserRepository implements UserRepository {
     try {
       final snapshot = await doc.get();
       if (!snapshot.exists) {
-        return _loadDisplayedLocalSnapshotForUid(uid);
+        return await _loadDisplayedLocalSnapshotForUid(uid);
       }
 
       final data = snapshot.data();
       if (data == null) {
-        return _loadDisplayedLocalSnapshotForUid(uid);
+        return await _loadDisplayedLocalSnapshotForUid(uid);
       }
 
       final merged = await _mergeRemoteSnapshot(
@@ -237,7 +239,7 @@ class FirestoreUserRepository implements UserRepository {
       await _persistLocalDisplayedSnapshot(merged);
       return merged;
     } catch (_) {
-      return _loadDisplayedLocalSnapshotForUid(uid);
+      return await _loadDisplayedLocalSnapshotForUid(uid);
     }
   }
 

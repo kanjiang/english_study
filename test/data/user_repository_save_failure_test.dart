@@ -1,8 +1,9 @@
+// ignore_for_file: subtype_of_sealed_class
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:english_app/data/local_cache.dart';
 import 'package:english_app/data/user_repository.dart';
 import 'package:english_app/domain/time/time_quota.dart';
-import 'package:english_app/domain/user/user_snapshot.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
