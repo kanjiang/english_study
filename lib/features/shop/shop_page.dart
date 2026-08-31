@@ -17,11 +17,14 @@ class ShopPage extends ConsumerStatefulWidget {
 
 class _ShopPageState extends ConsumerState<ShopPage> {
   String? _pendingItemId;
+  UserSnapshot? _displaySnapshot;
 
   @override
   Widget build(BuildContext context) {
     final snapshot =
-        ref.watch(foregroundUserSnapshotProvider) ?? widget.initialSnapshot;
+        _displaySnapshot ??
+        ref.watch(foregroundUserSnapshotProvider) ??
+        widget.initialSnapshot;
     final wallet = snapshot.child.wallet;
 
     return Scaffold(
@@ -78,7 +81,14 @@ class _ShopPageState extends ConsumerState<ShopPage> {
       _publishSnapshot(updated);
       await ref.read(userRepositoryProvider).save(updated);
     } on ShopPurchaseException catch (error) {
-      _showSnackBar(_purchaseMessage(error.errorKey));
+      if (error.errorKey == 'already_owned') {
+        final latestSnapshot =
+            await ref.read(userRepositoryProvider).load() ?? snapshot;
+        _publishSnapshot(latestSnapshot);
+        _showSnackBar('已经买过了');
+      } else {
+        _showSnackBar(_purchaseMessage(error.errorKey));
+      }
     } catch (_) {
       _showSnackBar('现在买不了，稍后再试');
     } finally {
@@ -109,6 +119,11 @@ class _ShopPageState extends ConsumerState<ShopPage> {
   }
 
   void _publishSnapshot(UserSnapshot snapshot) {
+    if (mounted) {
+      setState(() {
+        _displaySnapshot = snapshot;
+      });
+    }
     ref.read(foregroundUserSnapshotProvider.notifier).state = snapshot;
   }
 

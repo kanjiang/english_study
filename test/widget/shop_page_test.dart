@@ -4,6 +4,7 @@ import 'package:english_app/data/user_repository.dart';
 import 'package:english_app/domain/user/user_snapshot.dart';
 import 'package:english_app/domain/wallet/wallet.dart';
 import 'package:english_app/features/avatar/kid_avatar.dart';
+import 'package:english_app/features/shop/shop_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -82,12 +83,40 @@ void main() {
     expect(find.text('穿上'), findsOneWidget);
     expect((await repository.load())!.child.wallet.equipped.hat, isNull);
   });
+
+  testWidgets('already owned purchase refreshes the shop state', (
+    tester,
+  ) async {
+    final repository = _AlreadyOwnedRefreshRepository(
+      seed(),
+      _ownedAndEquippedHatSeed(),
+    );
+
+    await tester.pumpWidget(_buildShop(repository, seed()));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('buy_hat_20')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('buy_hat_20')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('已经买过了'), findsOneWidget);
+  });
 }
 
 Widget _buildApp(UserRepository repository) {
   return ProviderScope(
     overrides: [userRepositoryProvider.overrideWithValue(repository)],
     child: const XiaoCiXingApp(),
+  );
+}
+
+Widget _buildShop(UserRepository repository, UserSnapshot initialSnapshot) {
+  return ProviderScope(
+    overrides: [userRepositoryProvider.overrideWithValue(repository)],
+    child: MaterialApp(
+      home: ShopPage(initialSnapshot: initialSnapshot),
+    ),
   );
 }
 
@@ -104,4 +133,38 @@ UserSnapshot _ownedHatSeed() {
       ),
     ),
   );
+}
+
+UserSnapshot _ownedAndEquippedHatSeed() {
+  final seeded = seed();
+  return seeded.copyWith(
+    child: ChildProfile(
+      name: seeded.child.name,
+      avatarId: seeded.child.avatarId,
+      wallet: Wallet(
+        coins: seeded.child.wallet.coins,
+        ownedItemIds: const {'hat_20'},
+        equipped: const Equipped(hat: 'hat_20'),
+      ),
+    ),
+  );
+}
+
+class _AlreadyOwnedRefreshRepository extends FakeUserRepository {
+  _AlreadyOwnedRefreshRepository(this._latestSnapshot, UserSnapshot initial)
+    : super(initial);
+
+  final UserSnapshot _latestSnapshot;
+  bool _refreshAfterPurchase = false;
+
+  @override
+  Future<UserSnapshot?> load() async {
+    return _refreshAfterPurchase ? _latestSnapshot : super.load();
+  }
+
+  @override
+  Future<void> purchase(ShopItem item) async {
+    _refreshAfterPurchase = true;
+    throw const ShopPurchaseException('already_owned');
+  }
 }
