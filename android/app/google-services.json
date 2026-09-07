@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "130607768761",
+    "project_id": "english-study-kanjiang",
+    "storage_bucket": "english-study-kanjiang.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:130607768761:android:ce0f9b8f3addce2dbaa768",
+        "android_client_info": {
+          "package_name": "com.xiaocixing.english_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCm-P5d5HlDU3zV5iPONSq-LrMarxHYF4M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

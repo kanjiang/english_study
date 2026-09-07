@@ -9,8 +9,8 @@ Word w(String id) => Word(
   en: id,
   zh: id,
   category: 'animals',
-  iconCodePoint: 0xe91d,
-  audioAsset: 'assets/audio/beep.mp3',
+  imageAsset: 'assets/images/words/$id.png',
+  audioAsset: 'assets/audio/words/$id.wav',
 );
 
 List<Word> bank10() => List.generate(10, (i) => w('w$i'));

@@ -139,11 +139,10 @@ class _GameSessionState extends ConsumerState<GameSession> {
                     label: const Text('再听一次'),
                   )
                 else
-                  Icon(
+                  _WordImage(
                     key: const ValueKey('prompt_image'),
-                    _materialIconData(question.prompt.iconCodePoint),
+                    word: question.prompt,
                     size: 96,
-                    color: widget.theme.foregroundColor,
                   ),
                 if (isListening) ...[
                   const SizedBox(height: 16),
@@ -172,7 +171,7 @@ class _GameSessionState extends ConsumerState<GameSession> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: isListening
-                  ? Icon(_materialIconData(choice.iconCodePoint), size: 36)
+                  ? _WordImage(word: choice, size: 48)
                   : Text(
                       choice.en,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -341,7 +340,7 @@ class _TreasureCard extends StatelessWidget {
     if (!isRevealed) {
       content = const SizedBox(width: 42, height: 42);
     } else if (card.isImage) {
-      content = Icon(_materialIconData(word.iconCodePoint), size: 42);
+      content = _WordImage(word: word, size: 54);
     } else {
       content = Text(
         word.en,
@@ -366,6 +365,25 @@ class _TreasureCard extends StatelessWidget {
   }
 }
 
-IconData _materialIconData(int codePoint) {
-  return IconData(codePoint, fontFamily: 'MaterialIcons');
+class _WordImage extends StatelessWidget {
+  const _WordImage({required this.word, required this.size, super.key});
+
+  final Word word;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: size,
+      child: Image.asset(
+        word.imageAsset,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => Icon(
+          Icons.image_outlined,
+          size: size * 0.72,
+          color: Colors.black45,
+        ),
+      ),
+    );
+  }
 }

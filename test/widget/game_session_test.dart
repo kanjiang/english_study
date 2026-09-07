@@ -94,10 +94,10 @@ void main() {
         .map((text) => text.data)
         .whereType<String>()
         .where((text) => text.startsWith('w'));
-    final icons = tester.widgetList<Icon>(
-      find.descendant(of: revealedCard, matching: find.byType(Icon)),
+    final images = tester.widgetList<Image>(
+      find.descendant(of: revealedCard, matching: find.byType(Image)),
     );
-    expect(labels.isNotEmpty || icons.isNotEmpty, isTrue);
+    expect(labels.isNotEmpty || images.isNotEmpty, isTrue);
   });
 
   testWidgets('first treasure flip does not show mismatch feedback', (
@@ -215,13 +215,14 @@ void main() {
     await tester.pump();
 
     expect(audio.played, isNotEmpty);
-    expect(audio.played.single, 'assets/audio/w');
+    expect(audio.played.single, matches(r'^assets/audio/words/w\d\.wav$'));
     expect(find.byKey(const ValueKey('prompt_replay_button')), findsOneWidget);
     expect(find.byKey(const ValueKey('prompt_image')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('prompt_replay_button')));
     await tester.pump();
     expect(audio.played, hasLength(2));
+    expect(audio.played.last, audio.played.first);
   });
 
   testWidgets('monster shows prompt image without Chinese stem', (
@@ -242,6 +243,11 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const ValueKey('prompt_image')), findsOneWidget);
+    final promptImage = _promptImage(tester);
+    expect(
+      (promptImage.image as AssetImage).assetName,
+      matches(r'^assets/images/words/w\d\.png$'),
+    );
     expect(find.byKey(const ValueKey('prompt_replay_button')), findsNothing);
     expect(find.textContaining('词'), findsNothing);
   });
@@ -396,20 +402,31 @@ Finder _cardFinder(int index) => find.byKey(ValueKey('card_$index'));
 
 bool _cardHasContent(WidgetTester tester, int index) {
   final card = _cardFinder(index);
-  final icons = tester.widgetList<Icon>(
-    find.descendant(of: card, matching: find.byType(Icon)),
+  final images = tester.widgetList<Image>(
+    find.descendant(of: card, matching: find.byType(Image)),
   );
   final labels = tester
       .widgetList<Text>(find.descendant(of: card, matching: find.byType(Text)))
       .map((text) => text.data)
       .whereType<String>()
       .where((text) => text.startsWith('w'));
-  return icons.isNotEmpty || labels.isNotEmpty;
+  return images.isNotEmpty || labels.isNotEmpty;
 }
 
 int _promptWordIndex(WidgetTester tester) {
-  final icon = tester.widget<Icon>(find.byKey(const ValueKey('prompt_image')));
-  return icon.icon!.codePoint - _iconBase;
+  final image = _promptImage(tester);
+  final assetName = (image.image as AssetImage).assetName;
+  final match = RegExp(r'w(\d+)\.png$').firstMatch(assetName);
+  return int.parse(match!.group(1)!);
+}
+
+Image _promptImage(WidgetTester tester) {
+  return tester.widget<Image>(
+    find.descendant(
+      of: find.byKey(const ValueKey('prompt_image')),
+      matching: find.byType(Image),
+    ),
+  );
 }
 
 Map<String, List<int>> _treasurePairsByHiddenKeys() {
@@ -453,8 +470,6 @@ UserSnapshot _almostLockedSeed() {
   );
 }
 
-const _iconBase = 0xe000;
-
 List<Word> _bank10() {
   return List.generate(
     10,
@@ -463,8 +478,8 @@ List<Word> _bank10() {
       en: 'w$index',
       zh: '词$index',
       category: 'test',
-      iconCodePoint: _iconBase + index,
-      audioAsset: 'assets/audio/w',
+      imageAsset: 'assets/images/words/w$index.png',
+      audioAsset: 'assets/audio/words/w$index.wav',
     ),
   );
 }
