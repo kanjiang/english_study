@@ -17,7 +17,7 @@ Firebase 项目：`english-study-kanjiang`（显示名 `XiaoCiXing`）
 - ✅ Firebase 项目、Android/iOS App、Firestore 数据库、规则、邮箱登录和电话登录均已配置。
 - ✅ Android Debug APK 已成功构建。
 - 🟡 产品还不能视为“发布完成”：Android Firebase 签名登记、真机主路径、双设备同步、iOS 构建、发布签名和商店发布尚未完成。
-- 🟡 本次 Firebase 和 Android 配置仍是本地未提交改动，尚未推送 GitHub。
+- ✅ Firebase、Android/iOS 配置和 48 词资源已提交并推送到 GitHub。
 
 ## 3. 产品范围和设计
 
@@ -258,23 +258,8 @@ Firebase 项目：`english-study-kanjiang`（显示名 `XiaoCiXing`）
 
 - ✅ 当前分支：`master`。
 - ✅ 本地分支跟踪：`origin/master`。
-- ✅ GitHub 上最后已推送提交：`d17ebb6 fix: keep auth, ticker, and games in sync`。
-- 🟡 以下 Firebase/Android 配置尚未提交、尚未推送：
-  - `.firebaserc`
-  - `firebase.json`
-  - `android/app/google-services.json`
-  - `ios/Runner/GoogleService-Info.plist`
-  - `lib/firebase_options.dart`
-  - `lib/main.dart`
-  - `android/app/build.gradle.kts`
-  - `android/settings.gradle.kts`
-  - `android/gradle/wrapper/gradle-wrapper.properties`
-  - `ios/Runner.xcodeproj/project.pbxproj`
-  - `assets/audio/words/`
-  - `assets/images/words/`
-  - `docs/superpowers/specs/2026-09-03-word-assets-design.md`
-  - `docs/superpowers/plans/2026-09-03-word-assets.md`
-  - 本状态文档
+- ✅ GitHub 上最后已推送提交：`164a90d feat: complete MVP Firebase setup and word assets`。
+- ✅ Firebase/Android/iOS 配置、48 词图片音频资源和相关状态文档已提交并推送。
 - ℹ️ Firebase 移动端 API Key 通常属于客户端公开配置，可以提交；仍应在 Google Cloud 中按包名、Bundle ID 和 API 范围限制 Key。
 
 ## 10. 下一步执行顺序
@@ -314,8 +299,8 @@ Firebase 项目：`english-study-kanjiang`（显示名 `XiaoCiXing`）
 
 ### 第五优先级：版本控制和发布
 
-- ⬜ 22. 复查配置 diff，提交 Firebase/Android 集成改动。
-- ⬜ 23. 推送 `master` 到 GitHub。
+- ✅ 22. 复查配置 diff，提交 Firebase/Android 集成改动。
+- ✅ 23. 推送 `master` 到 GitHub。
 - ⬜ 24. 配置 Android release keystore 和正式 Firebase SHA。
 - ⬜ 25. 构建 AAB 并进行内部测试。
 - ⬜ 26. 在 macOS 完成 iOS 构建、签名和 TestFlight。
@@ -328,4 +313,3 @@ Firebase 项目：`english-study-kanjiang`（显示名 `XiaoCiXing`）
 - 不能声称 iOS 可以构建或已验收。
 - 不能声称应用具有生产级防作弊。
 - 不能声称 Android/iOS 已配置正式发布签名。
-- 不能声称本次 Firebase 配置已提交或推送 GitHub。
