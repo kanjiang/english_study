@@ -42,6 +42,15 @@ class _GameSessionState extends ConsumerState<GameSession> {
   late final QuizEngine _engine;
   late final Map<String, Word> _wordsById;
   bool _settling = false;
+  _VisibleGameFeedback? _visibleFeedback;
+  Timer? _feedbackTimer;
+  int _feedbackSerial = 0;
+
+  @override
+  void dispose() {
+    _feedbackTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -66,11 +75,22 @@ class _GameSessionState extends ConsumerState<GameSession> {
         foregroundColor: widget.theme.foregroundColor,
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: widget.kind == QuizKind.flipMatch
-              ? _buildFlipMatch(context)
-              : _buildPickQuestion(context),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: widget.kind == QuizKind.flipMatch
+                  ? _buildFlipMatch(context)
+                  : _buildPickQuestion(context),
+            ),
+            if (_visibleFeedback case final feedback?)
+              Positioned(
+                top: 24,
+                left: 20,
+                right: 20,
+                child: _GameFeedbackEffect(feedback: feedback),
+              ),
+          ],
         ),
       ),
     );
@@ -199,10 +219,11 @@ class _GameSessionState extends ConsumerState<GameSession> {
   Future<void> _afterFeedback(EngineFeedback feedback) async {
     if (feedback.judged) {
       if (feedback.correct) {
-        _showFeedback(widget.theme.correctText);
+        _showFeedback(widget.theme.correctText, correct: true);
       } else {
-        _showFeedback(widget.theme.wrongText);
+        _showFeedback(widget.theme.wrongText, correct: false);
       }
+      unawaited(_playFeedbackSound(correct: feedback.correct));
     }
 
     if (widget.kind == QuizKind.flipMatch &&
@@ -242,16 +263,44 @@ class _GameSessionState extends ConsumerState<GameSession> {
     }
   }
 
-  void _showFeedback(String text) {
+  void _showFeedback(String text, {required bool correct}) {
     if (!mounted) {
       return;
     }
+    final feedback = _VisibleGameFeedback(
+      text: text,
+      correct: correct,
+      serial: ++_feedbackSerial,
+    );
+    setState(() {
+      _visibleFeedback = feedback;
+    });
+    _feedbackTimer?.cancel();
+    _feedbackTimer = Timer(const Duration(milliseconds: 700), () {
+      if (!mounted || _visibleFeedback?.serial != feedback.serial) {
+        return;
+      }
+      setState(() {
+        _visibleFeedback = null;
+      });
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(text),
         duration: const Duration(milliseconds: 600),
       ),
     );
+  }
+
+  Future<void> _playFeedbackSound({required bool correct}) async {
+    final asset = correct
+        ? 'assets/audio/sfx/correct.wav'
+        : 'assets/audio/sfx/wrong.wav';
+    try {
+      await ref.read(soundEffectPlayerProvider).play(asset);
+    } catch (_) {
+      // Feedback sounds should not block game progress if an asset is missing.
+    }
   }
 
   Future<void> _playCurrentPromptIfNeeded() async {
@@ -318,6 +367,70 @@ class _GameSessionState extends ConsumerState<GameSession> {
     }
 
     return snapshot.copyWith(time: lockedSnapshot.time);
+  }
+}
+
+class _VisibleGameFeedback {
+  const _VisibleGameFeedback({
+    required this.text,
+    required this.correct,
+    required this.serial,
+  });
+
+  final String text;
+  final bool correct;
+  final int serial;
+}
+
+class _GameFeedbackEffect extends StatelessWidget {
+  const _GameFeedbackEffect({required this.feedback});
+
+  final _VisibleGameFeedback feedback;
+
+  @override
+  Widget build(BuildContext context) {
+    final background = feedback.correct
+        ? Colors.greenAccent.shade400
+        : Colors.orangeAccent.shade400;
+    final icon = feedback.correct
+        ? Icons.stars_rounded
+        : Icons.sentiment_satisfied_alt_rounded;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.82, end: 1),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) {
+        return Transform.scale(
+          scale: scale,
+          child: Opacity(opacity: scale.clamp(0.0, 1.0), child: child),
+        );
+      },
+      child: Material(
+        key: const ValueKey('game_feedback_effect'),
+        elevation: 8,
+        color: background,
+        borderRadius: BorderRadius.circular(28),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: 30),
+              const SizedBox(width: 8),
+              Text(
+                feedback.text,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

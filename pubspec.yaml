@@ -64,6 +64,7 @@ flutter:
 
   assets:
     - assets/audio/
+    - assets/audio/sfx/
     - assets/audio/words/
     - assets/images/words/
 

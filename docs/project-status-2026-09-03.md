@@ -109,7 +109,8 @@ Firebase 项目：`english-study-kanjiang`（显示名 `XiaoCiXing`）
 - ✅ 每 30 秒保存一次时长。
 - ✅ 时间用完后显示指定锁屏文案。
 - ✅ 登录后再出现用户快照时，计时器会继续工作。
-- 🟡 “今天”仍按设备上的上海时区计算，不使用 Firestore 服务端时间；用户修改系统时间可能影响跨日判断。
+- ✅ 已加入本地日期回拨保护：设备日期早于已记录日期时，不会把已用时长重置到过去日期。
+- 🟡 “今天”仍按设备上的上海时区计算，不使用 Firestore 服务端时间；服务端时间校验仍需后续云端方案。
 
 ### Task 9：48 词词库和音频接口
 
@@ -127,7 +128,8 @@ Firebase 项目：`english-study-kanjiang`（显示名 `XiaoCiXing`）
 - ✅ 三款游戏共用 QuizEngine。
 - ✅ 时间在题目中途用完时允许完成当前判题，然后进入时长锁。
 - ✅ 每局金币入账和分数保存已有 Widget 测试。
-- 🟡 反馈主要是基础 Widget 和 SnackBar，产品级角色动画、特效和音效尚未制作。
+- ✅ 答对/答错已有独立动画反馈层和本地 WAV 音效。
+- 🟡 产品级角色动画和更丰富的特效仍可继续精修。
 
 ### Task 11：换装商店
 
@@ -155,7 +157,7 @@ Firebase 项目：`english-study-kanjiang`（显示名 `XiaoCiXing`）
 
 ### Task 14：手工验收
 
-- ✅ 自动化层面：80 项 Flutter 测试通过。
+- ✅ 自动化层面：82 项 Flutter 测试通过。
 - ✅ 静态检查：`flutter analyze` 无问题。
 - ✅ Android Debug APK 构建成功。
 - ⬜ Android 真机完整主路径。
@@ -246,8 +248,9 @@ Firebase 项目：`english-study-kanjiang`（显示名 `XiaoCiXing`）
 ## 8. 自动化验证记录
 
 - ✅ `flutter analyze`：No issues found。
-- ✅ `flutter test`：80 tests passed。
+- ✅ `flutter test`：82 tests passed。
 - ✅ Word assets：48 个 PNG 图片和 48 个 WAV 音频文件均已生成并登记。
+- ✅ Game feedback assets：2 个 WAV 音效文件已生成并登记。
 - ✅ Firestore rules：编译和部署成功。
 - ✅ Firebase 管理接口：邮箱和电话提供方均为 enabled。
 - ✅ Firebase 客户端邮箱接口：返回 `WEAK_PASSWORD`，证明认证配置已生效；测试请求未创建用户。
@@ -293,9 +296,9 @@ Firebase 项目：`english-study-kanjiang`（显示名 `XiaoCiXing`）
 
 - ✅ 17. 替换 48 个词的 beep 占位音频。
 - ✅ 18. 替换 Material 图标为儿童闪卡图片。
-- ⬜ 19. 增加游戏成功/失败动画和音效。
+- ✅ 19. 增加游戏成功/失败动画和音效。
 - ⬜ 20. 完成手机账号重新认证、手机号换绑和忘记 PIN 流程。
-- ⬜ 21. 评估服务端时间和基础反作弊方案。
+- 🟡 21. 评估服务端时间和基础反作弊方案：本地日期回拨保护已完成，服务端时间方案待后续实现。
 
 ### 第五优先级：版本控制和发布
 

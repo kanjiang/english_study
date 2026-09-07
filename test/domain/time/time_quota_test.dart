@@ -47,6 +47,17 @@ void main() {
     expect(next.bonusMinutes, 0);
   });
 
+  test('clock rollback does not reset used seconds to an older date', () {
+    final next = q(
+      bonus: 10,
+      used: 1200,
+      date: '2026-08-26',
+    ).tick(deltaSeconds: 3, todayYyyyMmDd: '2026-08-25');
+    expect(next.usedOnDate, '2026-08-26');
+    expect(next.usedSeconds, 1203);
+    expect(next.bonusMinutes, 10);
+  });
+
   test('addBonusMinutes adds 10 and can be called twice', () {
     final next = q().addBonusMinutes().addBonusMinutes();
     expect(next.bonusMinutes, 20);

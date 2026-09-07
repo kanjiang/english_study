@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:english_app/data/local_cache.dart';
+import 'package:english_app/data/sound_effect_player.dart';
 import 'package:english_app/data/user_repository.dart';
 import 'package:english_app/data/word_audio_player.dart';
 import 'package:english_app/data/word_bank.dart';
@@ -34,6 +35,12 @@ final wordBankProvider = Provider<List<Word>>((ref) {
 
 final wordAudioPlayerProvider = Provider<WordAudioPlayer>((ref) {
   final player = JustAudioWordPlayer();
+  ref.onDispose(player.dispose);
+  return player;
+});
+
+final soundEffectPlayerProvider = Provider<SoundEffectPlayer>((ref) {
+  final player = JustAudioSoundEffectPlayer();
   ref.onDispose(player.dispose);
   return player;
 });

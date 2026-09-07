@@ -38,6 +38,7 @@ class TimeQuota {
 
   TimeQuota rollTo(String todayYyyyMmDd) {
     if (todayYyyyMmDd == usedOnDate) return this;
+    if (todayYyyyMmDd.compareTo(usedOnDate) < 0) return this;
     return TimeQuota(
       dailyLimitMinutes: dailyLimitMinutes,
       bonusMinutes: 0,

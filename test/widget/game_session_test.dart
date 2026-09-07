@@ -1,5 +1,6 @@
 import 'package:english_app/app.dart';
 import 'package:english_app/app/providers.dart';
+import 'package:english_app/data/sound_effect_player.dart';
 import 'package:english_app/data/user_repository.dart';
 import 'package:english_app/data/word_audio_player.dart';
 import 'package:english_app/domain/quiz/word.dart';
@@ -255,6 +256,8 @@ void main() {
   testWidgets('monster wrong answer shows feedback and advances', (
     tester,
   ) async {
+    final soundEffects = _RecordingSoundEffectPlayer();
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -263,6 +266,7 @@ void main() {
           ),
           wordBankProvider.overrideWithValue(_bank10()),
           wordAudioPlayerProvider.overrideWithValue(SilentWordAudioPlayer()),
+          soundEffectPlayerProvider.overrideWithValue(soundEffects),
         ],
         child: const MaterialApp(home: MonsterPage()),
       ),
@@ -281,13 +285,48 @@ void main() {
     await tester.tap(find.byKey(wrongKey));
     await tester.pump();
 
-    expect(find.text('落空！'), findsOneWidget);
+    expect(find.byKey(const ValueKey('game_feedback_effect')), findsOneWidget);
+    expect(_feedbackText('落空！'), findsOneWidget);
+    expect(soundEffects.played, contains('assets/audio/sfx/wrong.wav'));
 
     await tester.pumpAndSettle();
 
     final promptAfter = _promptWordIndex(tester);
     expect(promptAfter, isNot(promptBefore));
   });
+
+  testWidgets(
+    'monster correct answer shows animated feedback and plays sound',
+    (tester) async {
+      final soundEffects = _RecordingSoundEffectPlayer();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            userRepositoryProvider.overrideWithValue(
+              FakeUserRepository(_zeroCoinSeed()),
+            ),
+            wordBankProvider.overrideWithValue(_bank10()),
+            wordAudioPlayerProvider.overrideWithValue(SilentWordAudioPlayer()),
+            soundEffectPlayerProvider.overrideWithValue(soundEffects),
+          ],
+          child: const MaterialApp(home: MonsterPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final prompt = _promptWordIndex(tester);
+      await tester.tap(find.byKey(ValueKey<String>('choice_w$prompt')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey('game_feedback_effect')),
+        findsOneWidget,
+      );
+      expect(_feedbackText('击中！'), findsOneWidget);
+      expect(soundEffects.played, contains('assets/audio/sfx/correct.wav'));
+    },
+  );
 
   testWidgets('locked time after an answer pops game without next prompt', (
     tester,
@@ -367,6 +406,13 @@ Finder _allChoicesFinder() {
     (widget) =>
         widget.key is ValueKey<String> &&
         (widget.key! as ValueKey<String>).value.startsWith('choice_'),
+  );
+}
+
+Finder _feedbackText(String text) {
+  return find.descendant(
+    of: find.byKey(const ValueKey('game_feedback_effect')),
+    matching: find.text(text),
   );
 }
 
@@ -485,6 +531,18 @@ List<Word> _bank10() {
 }
 
 class _RecordingAudioPlayer implements WordAudioPlayer {
+  final played = <String>[];
+
+  @override
+  Future<void> play(String assetPath) async {
+    played.add(assetPath);
+  }
+
+  @override
+  Future<void> dispose() async {}
+}
+
+class _RecordingSoundEffectPlayer implements SoundEffectPlayer {
   final played = <String>[];
 
   @override
